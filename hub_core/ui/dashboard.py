@@ -57,11 +57,72 @@ def create_dashboard():
 
                     with ui.card().classes("w-full vh-card").props("flat"):
                         with ui.card_section():
-                            # 头部：名称 + 状态
+                            # 头部：名称 + 改名 + 状态
                             with ui.row().classes("items-center justify-between w-full"):
                                 with ui.row().classes("items-center gap-3"):
                                     ui.html(f'<span class="{dot_class}"></span>')
-                                    ui.label(name).classes("text-base font-semibold text-slate-800")
+                                    name_label = ui.label(name).classes(
+                                        "text-base font-semibold text-slate-800"
+                                    )
+
+                                    async def do_rename(
+                                        s=slug, n=name, lbl=None
+                                    ):
+                                        # lbl captured below
+                                        rename_input = ui.input(
+                                            value=n
+                                        ).classes("vh-input").props(
+                                            "outlined dense"
+                                        )
+                                        with ui.dialog() as dlg, ui.card().style(
+                                            "min-width: 340px; border-radius: 16px;"
+                                        ):
+                                            ui.label("重命名工具").classes(
+                                                "text-lg font-semibold text-slate-800"
+                                            )
+                                            rename_input = ui.input(
+                                                label="显示名称", value=n
+                                            ).classes("w-full vh-input mt-2").props(
+                                                "outlined dense"
+                                            )
+                                            with ui.row().classes(
+                                                "w-full justify-end gap-2 mt-4"
+                                            ):
+                                                ui.button(
+                                                    "取消",
+                                                    on_click=dlg.close,
+                                                ).props(
+                                                    "flat no-caps color=grey-7"
+                                                )
+
+                                                async def confirm_rename(
+                                                    s=s, inp=rename_input
+                                                ):
+                                                    new = inp.value.strip()
+                                                    if not new:
+                                                        return
+                                                    registry.rename_tool(s, new)
+                                                    dlg.close()
+                                                    ui.run_javascript(
+                                                        f"vhToast('success','已重命名','{new}', 3000)"
+                                                    )
+                                                    await refresh_cards()
+
+                                                ui.button(
+                                                    "确定",
+                                                    on_click=confirm_rename,
+                                                ).classes("vh-btn-primary").props(
+                                                    "unelevated no-caps"
+                                                )
+                                        dlg.open()
+
+                                    ui.button(
+                                        icon="edit",
+                                        on_click=lambda s=slug, n=name: do_rename(s, n),
+                                    ).props(
+                                        "flat dense round size=xs color=grey-5"
+                                    ).tooltip("重命名")
+
                                 ui.html(f'<span class="{badge_class}">{status_text}</span>')
 
                             # 元信息

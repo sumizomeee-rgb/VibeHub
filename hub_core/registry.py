@@ -67,3 +67,13 @@ def set_status(slug: str, status: str):
         data[slug]["status"] = status
         save(data)
         log.info(f"[{slug}] Status → {status}")
+
+
+def rename_tool(slug: str, new_name: str) -> bool:
+    data = load()
+    if slug in data:
+        data[slug]["display_name"] = new_name
+        save(data)
+        log.info(f"[{slug}] Renamed → {new_name}")
+        return True
+    return False
