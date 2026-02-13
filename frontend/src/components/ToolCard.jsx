@@ -1,12 +1,13 @@
 import { useState } from "react";
+import { ExternalLink, Edit3, RotateCw, Trash2, Check, X, Globe, Clock } from "./Icons";
 
 export default function ToolCard({ tool, index, onAction }) {
   const [renaming, setRenaming] = useState(false);
   const [newName, setNewName] = useState(tool.display_name || tool.slug);
+  const [hovered, setHovered] = useState(false);
 
   const alive = tool.alive && tool.status === "active";
   const isError = tool.status === "error";
-  const isStopped = !alive && !isError;
 
   const statusText = alive ? "运行中" : isError ? "异常" : "已停止";
   const statusColor = alive
@@ -23,129 +24,155 @@ export default function ToolCard({ tool, index, onAction }) {
 
   return (
     <div
-      className="rounded-2xl p-5 flex flex-col gap-3 transition-all duration-200"
+      className="card p-5 flex flex-col gap-3.5 animate-fade-in-scale"
       style={{
-        background: "var(--vh-surface)",
-        border: "1px solid var(--vh-border)",
-        boxShadow: "var(--vh-shadow-sm)",
         gridColumn: alive ? "span 2" : "span 1",
-        animationDelay: `${index * 60}ms`,
+        animationDelay: `${index * 50}ms`,
       }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
-      {/* Header: name + status */}
+      {/* Header row */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <span
-            className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-            style={{
-              background: statusColor,
-              animation: alive ? "pulse-green 2s ease-in-out infinite" : "none",
-            }}
-          />
+        <div className="flex items-center gap-3 min-w-0">
+          {/* Status dot */}
+          <div className="relative flex-shrink-0">
+            <span
+              className="block w-2.5 h-2.5 rounded-full"
+              style={{
+                background: statusColor,
+                animation: alive ? "pulse-green 2s ease-in-out infinite" : "none",
+              }}
+            />
+          </div>
+
+          {/* Name */}
           {renaming ? (
             <div className="flex items-center gap-2">
               <input
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleRename()}
-                className="px-2 py-1 rounded-lg text-sm outline-none"
-                style={{
-                  background: "var(--vh-bg-secondary)",
-                  color: "var(--vh-text)",
-                  border: "1px solid var(--vh-border)",
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleRename();
+                  if (e.key === "Escape") setRenaming(false);
                 }}
+                className="input-field"
+                style={{ padding: "4px 10px", fontSize: 13, width: 160 }}
                 autoFocus
               />
-              <button onClick={handleRename} className="text-xs cursor-pointer" style={{ color: "var(--vh-primary)" }}>
-                确定
+              <button onClick={handleRename} className="btn-ghost" style={{ padding: 4, color: "var(--vh-success)" }}>
+                <Check size={15} />
               </button>
-              <button onClick={() => setRenaming(false)} className="text-xs cursor-pointer" style={{ color: "var(--vh-text-muted)" }}>
-                取消
+              <button onClick={() => setRenaming(false)} className="btn-ghost" style={{ padding: 4, color: "var(--vh-text-muted)" }}>
+                <X size={15} />
               </button>
             </div>
           ) : (
-            <>
-              <span className="font-semibold" style={{ color: "var(--vh-text)", letterSpacing: "-0.02em" }}>
-                {tool.display_name || tool.slug}
-              </span>
-              <button
-                onClick={() => setRenaming(true)}
-                className="text-xs cursor-pointer opacity-40 hover:opacity-100 transition-opacity"
-                style={{ color: "var(--vh-text-muted)" }}
-                title="重命名"
-              >
-                ✏️
-              </button>
-            </>
+            <span
+              className="font-semibold truncate"
+              style={{ color: "var(--vh-text)", fontSize: 15, letterSpacing: "-0.02em" }}
+            >
+              {tool.display_name || tool.slug}
+            </span>
           )}
         </div>
+
+        {/* Status badge */}
         <span
-          className="text-xs font-medium px-2.5 py-1 rounded-full"
+          className="status-badge flex-shrink-0"
           style={{
             color: statusColor,
             background: alive
-              ? "rgba(5,150,105,0.1)"
+              ? "rgba(var(--vh-accent-rgb), 0.1)"
               : isError
-              ? "rgba(220,38,38,0.1)"
-              : "rgba(161,161,170,0.1)",
+              ? "rgba(220,38,38,0.08)"
+              : "var(--vh-bg-secondary)",
           }}
         >
+          <span
+            className="w-1.5 h-1.5 rounded-full"
+            style={{ background: statusColor, display: "inline-block" }}
+          />
           {statusText}
         </span>
       </div>
 
-      {/* Meta info */}
-      <div className="flex items-center gap-4 text-xs" style={{ color: "var(--vh-text-muted)" }}>
-        <span className="font-mono">/tools/{tool.slug}/</span>
-        <span>{tool.created_at || "未知"}</span>
-        {(tool.click_count || 0) > 0 && <span>{tool.click_count} 次使用</span>}
+      {/* Meta */}
+      <div className="flex items-center gap-3 text-xs" style={{ color: "var(--vh-text-muted)" }}>
+        <span className="flex items-center gap-1">
+          <Globe size={12} />
+          <span style={{ fontFamily: "var(--vh-font-mono)", fontSize: 11 }}>/tools/{tool.slug}/</span>
+        </span>
+        {tool.created_at && (
+          <span className="flex items-center gap-1">
+            <Clock size={12} />
+            {tool.created_at}
+          </span>
+        )}
+        {(tool.click_count || 0) > 0 && (
+          <span>{tool.click_count} 次使用</span>
+        )}
       </div>
 
       {/* Divider */}
       <div className="w-full h-px" style={{ background: "var(--vh-border)" }} />
 
       {/* Actions */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1">
         {alive && (
-          <ActionBtn
-            label="打开"
+          <button
+            className="btn-ghost"
+            style={{ fontSize: 12, padding: "5px 10px" }}
             onClick={() => {
               onAction("click", tool.slug);
               window.open(`/tools/${tool.slug}/`, "_blank");
             }}
-          />
+          >
+            <ExternalLink size={14} /> 打开
+          </button>
         )}
-        <ActionBtn label="编辑" onClick={() => onAction("edit", tool.slug)} />
-        <ActionBtn
-          label="重启"
-          color="var(--vh-warning)"
+        <button
+          className="btn-ghost"
+          style={{ fontSize: 12, padding: "5px 10px" }}
+          onClick={() => onAction("edit", tool.slug)}
+        >
+          <Edit3 size={14} /> 编辑
+        </button>
+        {!renaming && (
+          <button
+            className="btn-ghost"
+            style={{
+              fontSize: 12,
+              padding: "5px 10px",
+              opacity: hovered ? 1 : 0.5,
+              transition: "opacity 0.2s",
+            }}
+            onClick={() => setRenaming(true)}
+          >
+            重命名
+          </button>
+        )}
+        <button
+          className="btn-ghost"
+          style={{ fontSize: 12, padding: "5px 10px", color: "var(--vh-warning)" }}
           onClick={() => onAction("restart", tool.slug)}
-        />
+        >
+          <RotateCw size={14} /> 重启
+        </button>
         <div className="flex-1" />
-        <ActionBtn
-          label="🗑"
-          color="var(--vh-error)"
+        <button
+          className="btn-ghost"
+          style={{
+            padding: "5px 8px",
+            color: "var(--vh-error)",
+            opacity: hovered ? 1 : 0.4,
+            transition: "opacity 0.2s",
+          }}
           onClick={() => onAction("delete", tool.slug)}
-        />
+        >
+          <Trash2 size={14} />
+        </button>
       </div>
     </div>
-  );
-}
-
-function ActionBtn({ label, onClick, color }) {
-  return (
-    <button
-      onClick={onClick}
-      className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer"
-      style={{
-        color: color || "var(--vh-text-secondary)",
-        background: "transparent",
-        border: "none",
-      }}
-      onMouseEnter={(e) => (e.target.style.background = "var(--vh-bg-secondary)")}
-      onMouseLeave={(e) => (e.target.style.background = "transparent")}
-    >
-      {label}
-    </button>
   );
 }
