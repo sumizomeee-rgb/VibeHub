@@ -49,7 +49,7 @@ def create_dashboard():
                 with ui.column().classes("w-full items-center justify-center py-20 vh-fade-in"):
                     with ui.element("div").classes("vh-empty-icon"):
                         ui.icon("auto_awesome", size="52px").style(
-                            "color: #A29BFE;"
+                            "color: var(--vh-primary-light);"
                         )
                     ui.label("还没有部署任何工具").classes(
                         "text-xl font-semibold mt-8"
@@ -75,8 +75,9 @@ def create_dashboard():
                     ).style("color: var(--vh-text-muted);")
                 return
 
+            # Bento Grid: running tools span 2 columns
             with ui.element("div").classes("w-full vh-responsive-grid").style(
-                "display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 24px;"
+                "display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;"
             ):
                 for idx, tool in enumerate(tools):
                     slug = tool["slug"]
@@ -102,10 +103,15 @@ def create_dashboard():
                         status_text = "已停止"
                         card_status_class = "vh-card-stopped"
 
+                    # Bento: running tools get featured (span 2)
+                    bento_style = ""
+                    if status == "active" and alive:
+                        bento_style = "grid-column: span 2;"
+
                     with ui.card().classes(
                         f"w-full vh-card {card_status_class}"
                     ).props("flat").style(
-                        f"animation: staggerIn 0.4s cubic-bezier(0.16,1,0.3,1) {idx * 0.06}s both;"
+                        f"animation: staggerIn 0.4s cubic-bezier(0.16,1,0.3,1) {idx * 0.06}s both; {bento_style}"
                     ):
                         with ui.card_section():
                             # 头部：名称 + 改名 + 状态
@@ -121,7 +127,8 @@ def create_dashboard():
                                     ):
                                         with ui.dialog() as dlg, ui.card().style(
                                             "min-width: 340px; border-radius: 16px; "
-                                            "background: var(--vh-surface); border: 1px solid var(--vh-border);"
+                                            "background: var(--vh-surface); "
+                                            "box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08), 0 24px 48px rgba(0,0,0,0.5);"
                                         ):
                                             ui.label("重命名工具").classes(
                                                 "text-lg font-semibold"

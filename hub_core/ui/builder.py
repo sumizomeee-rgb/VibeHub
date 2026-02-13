@@ -120,11 +120,11 @@ def create_builder(edit_slug: str | None = None):
                 with ui.row().classes("items-center gap-3 vh-fade-in"):
                     with ui.element("div").style(
                         "width:44px; height:44px; border-radius:12px; "
-                        "background: linear-gradient(135deg, rgba(243,156,18,0.12), rgba(243,156,18,0.04)); "
-                        "border: 1px solid rgba(243,156,18,0.15); "
+                        "background: linear-gradient(135deg, rgba(251,191,36,0.15), rgba(251,191,36,0.05)); "
+                        "box-shadow: inset 0 0 0 1px rgba(251,191,36,0.2); "
                         "display:flex; align-items:center; justify-content:center;"
                     ):
-                        ui.icon("edit", size="22px").style("color: #F39C12;")
+                        ui.icon("edit", size="22px").style("color: #fbbf24;")
                     with ui.column().classes("gap-0"):
                         ui.label(
                             f"编辑 {existing_tool.get('display_name', edit_slug) if existing_tool else edit_slug}"
@@ -136,11 +136,11 @@ def create_builder(edit_slug: str | None = None):
                 with ui.row().classes("items-center gap-3 vh-fade-in"):
                     with ui.element("div").style(
                         "width:44px; height:44px; border-radius:12px; "
-                        "background: linear-gradient(135deg, rgba(108,92,231,0.12), rgba(108,92,231,0.04)); "
-                        "border: 1px solid rgba(108,92,231,0.15); "
+                        "background: linear-gradient(135deg, rgba(129,140,248,0.15), rgba(129,140,248,0.05)); "
+                        "box-shadow: inset 0 0 0 1px rgba(129,140,248,0.2); "
                         "display:flex; align-items:center; justify-content:center;"
                     ):
-                        ui.icon("auto_awesome", size="22px").style("color: #A29BFE;")
+                        ui.icon("auto_awesome", size="22px").style("color: var(--vh-primary-light);")
                     with ui.column().classes("gap-0"):
                         ui.label("创建新工具").classes("text-2xl font-bold").style(
                             "color: var(--vh-text);"
@@ -164,7 +164,7 @@ def create_builder(edit_slug: str | None = None):
             # 如果是编辑模式，显示当前代码
             if existing_code:
                 with ui.expansion("查看当前代码", icon="code").classes("w-full").style(
-                    "border: 1px solid var(--vh-border); border-radius: 16px; "
+                    "box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08); border-radius: 16px; "
                     "color: var(--vh-text);"
                 ):
                     ui.code(existing_code, language="python").classes(
@@ -283,23 +283,24 @@ def create_builder(edit_slug: str | None = None):
         result_container.clear()
         with result_container:
             with ui.card().classes("w-full vh-celebrate").props("flat").style(
-                "background: linear-gradient(135deg, rgba(0,184,148,0.08) 0%, rgba(0,184,148,0.02) 100%) !important; "
-                "border: 1px solid rgba(0,184,148,0.2) !important; border-radius: 20px;"
+                "background: linear-gradient(135deg, rgba(52,211,153,0.08) 0%, rgba(39,39,42,0.6) 100%) !important; "
+                "box-shadow: inset 0 0 0 1px rgba(52,211,153,0.15), 0 0 40px rgba(52,211,153,0.06) !important; "
+                "border-radius: 20px; border: none !important;"
             ):
                 with ui.card_section().classes("items-center w-full py-10 gap-5"):
                     # 大图标
                     with ui.element("div").classes("vh-celebrate-icon").style(
                         "width: 80px; height: 80px; border-radius: 22px; "
-                        "background: linear-gradient(135deg, #00B894, #00D4AA); "
+                        "background: linear-gradient(135deg, #059669, #34d399); "
                         "display: flex; align-items: center; justify-content: center; "
-                        "box-shadow: 0 8px 32px rgba(0, 184, 148, 0.3); "
+                        "box-shadow: 0 8px 32px rgba(52, 211, 153, 0.35); "
                         "margin: 0 auto;"
                     ):
                         ui.icon("check", size="40px").style("color: white;")
 
                     ui.label(display_name).classes(
                         "text-2xl font-bold"
-                    ).style("text-align: center; color: #00956E;")
+                    ).style("text-align: center; color: #6ee7b7;")
                     ui.label("部署成功，工具已上线").classes(
                         "font-medium text-lg"
                     ).style("color: var(--vh-accent);")
