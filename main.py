@@ -94,6 +94,7 @@ ui.run(
     host="127.0.0.1",
     port=config.HUB_INTERNAL_PORT,
     title="VibeHub",
+    favicon="static/favicon.svg",
     reload=False,
     show=False,
 )
