@@ -32,6 +32,7 @@ def register_tool(slug: str, display_name: str, script_path: str):
         "path": script_path,
         "route_slug": slug,
         "created_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "click_count": data.get(slug, {}).get("click_count", 0),
     }
     save(data)
     log.info(f"[{slug}] Registered: {display_name}")
@@ -48,6 +49,8 @@ def list_tools() -> list[dict]:
     data = load()
     result = []
     for slug, info in data.items():
+        if "click_count" not in info:
+            info["click_count"] = 0
         result.append({"slug": slug, **info})
     return result
 
@@ -77,3 +80,11 @@ def rename_tool(slug: str, new_name: str) -> bool:
         log.info(f"[{slug}] Renamed → {new_name}")
         return True
     return False
+
+
+def increment_click(slug: str):
+    """记录工具被打开的次数"""
+    data = load()
+    if slug in data:
+        data[slug]["click_count"] = data[slug].get("click_count", 0) + 1
+        save(data)

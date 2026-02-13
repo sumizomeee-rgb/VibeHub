@@ -95,14 +95,14 @@ def create_builder(edit_slug: str | None = None):
             with ui.row().classes("items-center gap-2 cursor-pointer").on(
                 "click", lambda: ui.navigate.to("/")
             ):
-                ui.icon("hub", size="30px").classes("text-white")
+                ui.icon("hub", size="30px").classes("text-white vh-header-logo")
                 ui.label("VibeHub").classes(
-                    "text-2xl font-bold text-white tracking-tight"
+                    "text-2xl font-bold text-white tracking-tight vh-header-logo"
                 )
         ui.button(
             "返回看板", icon="arrow_back", on_click=lambda: ui.navigate.to("/")
         ).props("flat text-color=white no-caps").style(
-            "font-weight: 500; border-radius: 10px;"
+            "font-weight: 500; border-radius: 10px; color: rgba(255,255,255,0.7);"
         )
 
     # ---- Page container ----
@@ -120,28 +120,34 @@ def create_builder(edit_slug: str | None = None):
                 with ui.row().classes("items-center gap-3 vh-fade-in"):
                     with ui.element("div").style(
                         "width:44px; height:44px; border-radius:12px; "
-                        "background: linear-gradient(135deg, #fef3c7, #fde68a); "
+                        "background: linear-gradient(135deg, rgba(243,156,18,0.12), rgba(243,156,18,0.04)); "
+                        "border: 1px solid rgba(243,156,18,0.15); "
                         "display:flex; align-items:center; justify-content:center;"
                     ):
-                        ui.icon("edit", size="22px").classes("text-amber-600")
+                        ui.icon("edit", size="22px").style("color: #F39C12;")
                     with ui.column().classes("gap-0"):
                         ui.label(
                             f"编辑 {existing_tool.get('display_name', edit_slug) if existing_tool else edit_slug}"
-                        ).classes("text-2xl font-bold text-slate-800")
-                        ui.label("修改需求后重新部署").classes("text-sm text-slate-400")
+                        ).classes("text-2xl font-bold").style("color: var(--vh-text);")
+                        ui.label("修改需求后重新部署").classes("text-sm").style(
+                            "color: var(--vh-text-muted);"
+                        )
             else:
                 with ui.row().classes("items-center gap-3 vh-fade-in"):
                     with ui.element("div").style(
                         "width:44px; height:44px; border-radius:12px; "
-                        "background: linear-gradient(135deg, #e0e7ff, #c7d2fe); "
+                        "background: linear-gradient(135deg, rgba(108,92,231,0.12), rgba(108,92,231,0.04)); "
+                        "border: 1px solid rgba(108,92,231,0.15); "
                         "display:flex; align-items:center; justify-content:center;"
                     ):
-                        ui.icon("auto_awesome", size="22px").classes("text-indigo-500")
+                        ui.icon("auto_awesome", size="22px").style("color: #A29BFE;")
                     with ui.column().classes("gap-0"):
-                        ui.label("创建新工具").classes("text-2xl font-bold text-slate-800")
-                        ui.label("描述你想要的工具，AI 会自动生成、测试并部署").classes(
-                            "text-sm text-slate-400"
+                        ui.label("创建新工具").classes("text-2xl font-bold").style(
+                            "color: var(--vh-text);"
                         )
+                        ui.label("描述你想要的工具，AI 会自动生成、测试并部署").classes(
+                            "text-sm"
+                        ).style("color: var(--vh-text-muted);")
 
             # ---- 需求输入卡片 ----
             with ui.card().classes("w-full vh-card").props("flat"):
@@ -153,12 +159,13 @@ def create_builder(edit_slug: str | None = None):
 
                     user_input = ui.textarea(
                         label="需求描述", placeholder=prompt_placeholder
-                    ).classes("w-full vh-input").props("outlined autogrow rows=4")
+                    ).classes("w-full vh-input").props("outlined autogrow rows=4 stack-label")
 
             # 如果是编辑模式，显示当前代码
             if existing_code:
                 with ui.expansion("查看当前代码", icon="code").classes("w-full").style(
-                    "border: 1px solid #e2e8f0; border-radius: 16px;"
+                    "border: 1px solid var(--vh-border); border-radius: 16px; "
+                    "color: var(--vh-text);"
                 ):
                     ui.code(existing_code, language="python").classes(
                         "w-full max-h-80 overflow-auto"
@@ -186,12 +193,27 @@ def create_builder(edit_slug: str | None = None):
                     ) as step_col:
                         with ui.element("div").classes("vh-step-icon") as icon_div:
                             ui.icon(icon_name, size="20px")
-                        ui.label(label).classes("text-xs font-medium text-slate-400")
+                        ui.label(label).classes("text-xs font-medium").style(
+                            "color: var(--vh-text-muted);"
+                        )
 
                     step_items.append((step_col, icon_div, connector))
 
-            # 进度日志区（终端风格）
-            log_area = ui.log(max_lines=50).classes("w-full h-64 hidden vh-terminal")
+            # 终端标题栏 + 日志区
+            terminal_wrapper = ui.column().classes("w-full hidden gap-0")
+            with terminal_wrapper:
+                with ui.element("div").classes("vh-terminal-header"):
+                    ui.element("div").classes("vh-terminal-dot").style("background: #ff5f57;")
+                    ui.element("div").classes("vh-terminal-dot").style("background: #febc2e;")
+                    ui.element("div").classes("vh-terminal-dot").style("background: #28c840;")
+                    ui.label("部署日志").classes("text-xs font-medium ml-2").style(
+                        "color: rgba(255,255,255,0.5);"
+                    )
+
+            log_area = ui.log(max_lines=50).classes("w-full h-64 vh-terminal").style(
+                "border-top-left-radius: 0 !important; border-top-right-radius: 0 !important; margin-top: -1px;"
+            )
+            log_area.set_visibility(False)
 
         # ============================================================
         # 成功结果区（部署成功后显示，接管页面）
@@ -240,6 +262,10 @@ def create_builder(edit_slug: str | None = None):
         safe = msg.replace("\\", "\\\\").replace("'", "\\'")
         ui.run_javascript(_JS_DEPLOY_FAIL.replace("%MSG%", safe))
 
+    def _show_log():
+        terminal_wrapper.classes(remove="hidden")
+        log_area.set_visibility(True)
+
     def _show_success(display_name: str, slug: str):
         """Hide form, show success panel — takes over the page."""
         tool_url = f"/tools/{slug}/"
@@ -257,26 +283,26 @@ def create_builder(edit_slug: str | None = None):
         result_container.clear()
         with result_container:
             with ui.card().classes("w-full vh-celebrate").props("flat").style(
-                "background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 50%, #a7f3d0 100%); "
-                "border: 1px solid #6ee7b7; border-radius: 20px;"
+                "background: linear-gradient(135deg, rgba(0,184,148,0.08) 0%, rgba(0,184,148,0.02) 100%) !important; "
+                "border: 1px solid rgba(0,184,148,0.2) !important; border-radius: 20px;"
             ):
                 with ui.card_section().classes("items-center w-full py-10 gap-5"):
                     # 大图标
                     with ui.element("div").classes("vh-celebrate-icon").style(
                         "width: 80px; height: 80px; border-radius: 22px; "
-                        "background: linear-gradient(135deg, #10b981, #34d399); "
+                        "background: linear-gradient(135deg, #00B894, #00D4AA); "
                         "display: flex; align-items: center; justify-content: center; "
-                        "box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3); "
+                        "box-shadow: 0 8px 32px rgba(0, 184, 148, 0.3); "
                         "margin: 0 auto;"
                     ):
-                        ui.icon("check", size="40px").classes("text-white")
+                        ui.icon("check", size="40px").style("color: white;")
 
                     ui.label(display_name).classes(
-                        "text-2xl font-bold text-emerald-800"
-                    ).style("text-align: center;")
+                        "text-2xl font-bold"
+                    ).style("text-align: center; color: #00956E;")
                     ui.label("部署成功，工具已上线").classes(
-                        "text-emerald-600 font-medium text-lg"
-                    )
+                        "font-medium text-lg"
+                    ).style("color: var(--vh-accent);")
 
                     # 操作按钮
                     with ui.row().classes("gap-4 mt-4 justify-center flex-wrap"):
@@ -286,26 +312,22 @@ def create_builder(edit_slug: str | None = None):
                             on_click=lambda u=tool_url: ui.navigate.to(
                                 u, new_tab=True
                             ),
-                        ).classes("vh-btn-primary").props(
+                        ).classes("vh-btn-accent").props(
                             "unelevated no-caps size=lg"
-                        ).style(
-                            "background: linear-gradient(135deg, #10b981, #059669) !important; "
-                            "box-shadow: 0 4px 14px rgba(16,185,129,0.35) !important; "
-                            "height: 48px; padding: 0 28px;"
-                        )
+                        ).style("height: 48px; padding: 0 28px;")
                         ui.button(
                             "返回看板",
                             icon="dashboard",
                             on_click=lambda: ui.navigate.to("/"),
                         ).classes("vh-btn-outline").props(
-                            "outline no-caps size=md color=grey-8"
+                            "outline no-caps size=md"
                         )
                         ui.button(
                             "再建一个",
                             icon="add",
                             on_click=lambda: ui.navigate.to("/builder"),
                         ).classes("vh-btn-outline").props(
-                            "outline no-caps size=md color=grey-8"
+                            "outline no-caps size=md"
                         )
 
         # confetti + 滚动到顶部
@@ -326,7 +348,7 @@ def create_builder(edit_slug: str | None = None):
             )
             return
 
-        log_area.classes(remove="hidden")
+        _show_log()
         log_area.clear()
         result_container.classes(add="hidden")
 

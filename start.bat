@@ -21,54 +21,67 @@ if not defined CLAUDE_CODE_GIT_BASH_PATH (
 )
 
 :: ============================================
+:: Clean up old processes
+:: ============================================
+echo [0/4] Cleaning up old processes...
+taskkill /IM caddy.exe /F >nul 2>&1
+:: Kill any leftover VibeHub python on port 8080
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":8080" ^| findstr "LISTENING"') do (
+    taskkill /PID %%a /F >nul 2>&1
+)
+timeout /t 1 /nobreak >nul
+echo   Done
+echo.
+
+:: ============================================
 :: Environment Check
 :: ============================================
 echo [1/4] Checking environment...
 
-set ENV_OK=1
+set "ENV_OK=1"
 
 where node >nul 2>&1
-if !errorlevel! neq 0 (
+if errorlevel 1 (
     echo   [X] Node.js not found - required by Claude CLI
-    set ENV_OK=0
+    set "ENV_OK=0"
 ) else (
     echo   [OK] Node.js found
 )
 
 where npm >nul 2>&1
-if !errorlevel! neq 0 (
+if errorlevel 1 (
     echo   [X] npm not found
-    set ENV_OK=0
+    set "ENV_OK=0"
 ) else (
     echo   [OK] npm found
 )
 
 where claude >nul 2>&1
-if !errorlevel! neq 0 (
+if errorlevel 1 (
     echo   [X] Claude CLI not found - run: npm install -g @anthropic-ai/claude-code
-    set ENV_OK=0
+    set "ENV_OK=0"
 ) else (
     echo   [OK] Claude CLI found
 )
 
 where bash >nul 2>&1
-if !errorlevel! neq 0 (
+if errorlevel 1 (
     echo   [X] Git Bash not found - install Git from https://git-scm.com/downloads/win
-    set ENV_OK=0
+    set "ENV_OK=0"
 ) else (
     echo   [OK] Git Bash found
 )
 
 if not exist "%VIBEHUB_ROOT%bin\uv.exe" (
     echo   [X] bin\uv.exe not found - download from https://github.com/astral-sh/uv/releases
-    set ENV_OK=0
+    set "ENV_OK=0"
 ) else (
     echo   [OK] uv.exe found
 )
 
 if not exist "%VIBEHUB_ROOT%bin\caddy.exe" (
     echo   [X] bin\caddy.exe not found - download from https://github.com/caddyserver/caddy/releases
-    set ENV_OK=0
+    set "ENV_OK=0"
 ) else (
     echo   [OK] caddy.exe found
 )

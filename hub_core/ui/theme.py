@@ -1,26 +1,29 @@
 """
-VibeHub Design System
-Shared styles, colors, and components for a cohesive modern SaaS look.
+VibeHub Design System — Warm Bright Premium Theme
+Shared styles, colors, and components for a cohesive modern light SaaS look.
 """
 
 from nicegui import ui
 
 # ---- Design Tokens ----
 BRAND = {
-    "primary": "#6366f1",
-    "primary_light": "#818cf8",
-    "primary_dark": "#4f46e5",
-    "accent": "#06b6d4",
-    "success": "#10b981",
-    "warning": "#f59e0b",
-    "error": "#ef4444",
-    "surface": "#ffffff",
-    "surface_dim": "#f8fafc",
-    "surface_dark": "#0f172a",
-    "text": "#0f172a",
-    "text_secondary": "#64748b",
-    "text_muted": "#94a3b8",
-    "border": "#e2e8f0",
+    "primary": "#6C5CE7",
+    "primary_light": "#A29BFE",
+    "primary_dark": "#5A4BD1",
+    "accent": "#00B894",
+    "success": "#00B894",
+    "warning": "#F39C12",
+    "error": "#E74C3C",
+    "info": "#74B9FF",
+    "surface": "#FFFFFF",
+    "surface_hover": "#F8F9FC",
+    "surface_dim": "#F1F3F8",
+    "surface_dark": "#F5F6FA",
+    "text": "#2D3436",
+    "text_secondary": "#636E72",
+    "text_muted": "#B2BEC3",
+    "border": "rgba(0,0,0,0.06)",
+    "border_glass": "rgba(0,0,0,0.08)",
 }
 
 # ---- Google Fonts ----
@@ -34,134 +37,242 @@ _FONTS_HTML = """
 _GLOBAL_CSS = """
 <style>
 :root {
-    --vh-primary: #6366f1;
-    --vh-primary-light: #818cf8;
-    --vh-accent: #06b6d4;
-    --vh-success: #10b981;
-    --vh-error: #ef4444;
-    --vh-surface: #ffffff;
-    --vh-bg: #f1f5f9;
-    --vh-text: #0f172a;
-    --vh-text-secondary: #64748b;
-    --vh-border: #e2e8f0;
+    --vh-primary: #6C5CE7;
+    --vh-primary-light: #A29BFE;
+    --vh-primary-dark: #5A4BD1;
+    --vh-accent: #00B894;
+    --vh-success: #00B894;
+    --vh-warning: #F39C12;
+    --vh-error: #E74C3C;
+    --vh-info: #74B9FF;
+    --vh-surface: #FFFFFF;
+    --vh-surface-hover: #F8F9FC;
+    --vh-bg: #F5F6FA;
+    --vh-bg-secondary: #F1F3F8;
+    --vh-text: #2D3436;
+    --vh-text-secondary: #636E72;
+    --vh-text-muted: #B2BEC3;
+    --vh-border: rgba(0,0,0,0.06);
+    --vh-border-glass: rgba(0,0,0,0.08);
     --vh-radius: 16px;
     --vh-radius-sm: 10px;
-    --vh-shadow-sm: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
-    --vh-shadow-md: 0 4px 16px rgba(0,0,0,0.06), 0 2px 4px rgba(0,0,0,0.04);
-    --vh-shadow-lg: 0 12px 40px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.04);
-    --vh-shadow-glow: 0 0 24px rgba(99, 102, 241, 0.15);
+    --vh-shadow-sm: 0 1px 3px rgba(0,0,0,0.04), 0 2px 8px rgba(0,0,0,0.06);
+    --vh-shadow-md: 0 2px 8px rgba(0,0,0,0.06), 0 4px 20px rgba(0,0,0,0.08);
+    --vh-shadow-lg: 0 4px 12px rgba(0,0,0,0.08), 0 12px 32px rgba(0,0,0,0.12);
+    --vh-shadow-glow: 0 0 24px rgba(108, 92, 231, 0.12);
+    --vh-transition: cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+*, *::before, *::after { box-sizing: border-box; }
 
 body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
     background: var(--vh-bg) !important;
     color: var(--vh-text);
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
-/* ---- Header ---- */
+/* Force light on Quasar/NiceGUI containers */
+.q-page, .q-layout, .q-page-container, .nicegui-content {
+    background: var(--vh-bg) !important;
+    color: var(--vh-text) !important;
+}
+
+/* ---- Header (deep purple gradient — brand anchor) ---- */
 .vh-header {
-    background: linear-gradient(135deg, #4f46e5 0%, #6366f1 50%, #818cf8 100%) !important;
-    box-shadow: 0 4px 20px rgba(79, 70, 229, 0.25) !important;
-    backdrop-filter: blur(12px);
+    background: linear-gradient(135deg, #6C5CE7 0%, #5A4BD1 60%, #4834B0 100%) !important;
+    backdrop-filter: none !important;
     border-bottom: none !important;
+    box-shadow: 0 2px 12px rgba(108, 92, 231, 0.25), 0 1px 4px rgba(0,0,0,0.1) !important;
+}
+.vh-header-logo {
+    text-shadow: 0 1px 8px rgba(255, 255, 255, 0.25);
 }
 
 /* ---- Cards ---- */
 .vh-card {
-    background: var(--vh-surface);
-    border: 1px solid var(--vh-border);
+    background: var(--vh-surface) !important;
+    border: 1px solid var(--vh-border) !important;
     border-radius: var(--vh-radius) !important;
     box-shadow: var(--vh-shadow-sm);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.35s var(--vh-transition);
     overflow: hidden;
+    position: relative;
+    color: var(--vh-text) !important;
+}
+.vh-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--vh-text-muted);
+    opacity: 0.3;
+    transition: all 0.35s var(--vh-transition);
 }
 .vh-card:hover {
     box-shadow: var(--vh-shadow-lg);
-    transform: translateY(-3px);
-    border-color: var(--vh-primary-light);
+    transform: translateY(-4px);
+    border-color: var(--vh-border-glass) !important;
+}
+.vh-card:hover::before {
+    opacity: 0.6;
+}
+
+/* Card status top-bar variants */
+.vh-card-running::before {
+    background: linear-gradient(90deg, #00B894, #00D4AA) !important;
+    opacity: 1 !important;
+    box-shadow: 0 1px 8px rgba(0, 184, 148, 0.35);
+}
+.vh-card-running:hover::before {
+    box-shadow: 0 1px 14px rgba(0, 184, 148, 0.5);
+}
+.vh-card-error::before {
+    background: linear-gradient(90deg, #E74C3C, #FF6B6B) !important;
+    opacity: 1 !important;
+    box-shadow: 0 1px 8px rgba(231, 76, 60, 0.35);
+}
+.vh-card-stopped::before {
+    background: var(--vh-text-muted) !important;
+    opacity: 0.4 !important;
 }
 
 /* ---- Buttons ---- */
 .vh-btn-primary {
-    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
+    background: linear-gradient(135deg, #6C5CE7 0%, #5A4BD1 100%) !important;
     color: white !important;
-    border-radius: 12px !important;
+    border-radius: 10px !important;
     font-weight: 600 !important;
     letter-spacing: 0.01em;
-    box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35) !important;
-    transition: all 0.2s ease !important;
+    box-shadow: 0 4px 14px rgba(108, 92, 231, 0.3) !important;
+    transition: all 0.25s var(--vh-transition) !important;
     text-transform: none !important;
+    border: 1px solid rgba(162, 155, 254, 0.3) !important;
 }
 .vh-btn-primary:hover {
-    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5) !important;
-    transform: translateY(-1px);
+    box-shadow: 0 6px 22px rgba(108, 92, 231, 0.45) !important;
+    transform: scale(1.02);
+    filter: brightness(1.08);
+}
+
+.vh-btn-accent {
+    background: linear-gradient(135deg, #00B894 0%, #00A381 100%) !important;
+    color: white !important;
+    border-radius: 10px !important;
+    font-weight: 600 !important;
+    box-shadow: 0 4px 14px rgba(0, 184, 148, 0.3) !important;
+    transition: all 0.25s var(--vh-transition) !important;
+    text-transform: none !important;
+}
+.vh-btn-accent:hover {
+    box-shadow: 0 6px 22px rgba(0, 184, 148, 0.45) !important;
+    transform: scale(1.02);
+    filter: brightness(1.08);
 }
 
 .vh-btn-ghost {
     border-radius: 10px !important;
     font-weight: 500 !important;
     text-transform: none !important;
-    transition: all 0.2s ease !important;
+    transition: all 0.2s var(--vh-transition) !important;
+    color: var(--vh-text-secondary) !important;
 }
 .vh-btn-ghost:hover {
-    background: rgba(99, 102, 241, 0.08) !important;
+    background: rgba(108, 92, 231, 0.08) !important;
+    color: var(--vh-primary) !important;
 }
 
 .vh-btn-outline {
-    border: 1.5px solid var(--vh-border) !important;
+    border: 1.5px solid rgba(0,0,0,0.12) !important;
     border-radius: 10px !important;
     font-weight: 500 !important;
     text-transform: none !important;
-    transition: all 0.2s ease !important;
+    transition: all 0.2s var(--vh-transition) !important;
+    color: var(--vh-text-secondary) !important;
 }
 .vh-btn-outline:hover {
     border-color: var(--vh-primary) !important;
     color: var(--vh-primary) !important;
-    background: rgba(99, 102, 241, 0.04) !important;
+    background: rgba(108, 92, 231, 0.06) !important;
+}
+
+.vh-btn-header {
+    background: rgba(255,255,255,0.15) !important;
+    color: white !important;
+    backdrop-filter: blur(8px) !important;
+    border: 1px solid rgba(255,255,255,0.2) !important;
+    font-weight: 600 !important;
+    border-radius: 10px !important;
+    text-transform: none !important;
+    transition: all 0.2s var(--vh-transition) !important;
+}
+.vh-btn-header:hover {
+    background: rgba(255,255,255,0.25) !important;
+    border-color: rgba(255,255,255,0.35) !important;
 }
 
 /* ---- Status Indicators ---- */
 .vh-status-dot {
     width: 10px; height: 10px; border-radius: 50%; display: inline-block;
     position: relative;
+    flex-shrink: 0;
 }
 .vh-status-dot::after {
     content: '';
     position: absolute;
     inset: -3px;
     border-radius: 50%;
-    opacity: 0.3;
+    opacity: 0;
 }
 .vh-status-running {
-    background: var(--vh-success);
-    box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+    background: var(--vh-accent);
+    box-shadow: 0 0 6px rgba(0, 184, 148, 0.5);
 }
 .vh-status-running::after {
-    background: var(--vh-success);
+    background: var(--vh-accent);
+    opacity: 0.3;
     animation: statusPulse 2s ease-in-out infinite;
 }
 .vh-status-error {
     background: var(--vh-error);
-    box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+    box-shadow: 0 0 6px rgba(231, 76, 60, 0.5);
+}
+.vh-status-error::after {
+    background: var(--vh-error);
+    opacity: 0.3;
+    animation: statusPulse 2s ease-in-out infinite;
 }
 .vh-status-stopped {
-    background: #cbd5e1;
+    background: var(--vh-text-muted);
 }
 
-/* ---- Terminal Log ---- */
+/* ---- Terminal Log (stays dark — natural terminal feel) ---- */
 .vh-terminal {
-    background: #0f172a !important;
-    color: #e2e8f0;
+    background: #1E1E2E !important;
+    color: #CDD6F4;
     border-radius: var(--vh-radius) !important;
     font-family: 'JetBrains Mono', 'Cascadia Code', monospace !important;
     font-size: 12.5px;
-    border: 1px solid #1e293b;
-    box-shadow: inset 0 2px 8px rgba(0,0,0,0.3);
+    border: 1px solid rgba(0,0,0,0.1) !important;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.15), var(--vh-shadow-sm);
+    position: relative;
 }
 .vh-terminal .q-virtual-scroll__content {
     padding: 16px 20px;
-    line-height: 1.7;
+    line-height: 1.75;
+}
+.vh-terminal-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: rgba(0,0,0,0.15);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    border-radius: var(--vh-radius) var(--vh-radius) 0 0;
+}
+.vh-terminal-dot {
+    width: 10px; height: 10px; border-radius: 50%;
 }
 
 /* ---- Progress Stepper ---- */
@@ -177,36 +288,37 @@ body {
     border-radius: 12px;
     display: flex; align-items: center; justify-content: center;
     font-size: 18px;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.4s var(--vh-transition);
 }
 .vh-step-pending .vh-step-icon {
-    background: #f1f5f9;
-    color: #94a3b8;
+    background: rgba(0,0,0,0.04);
+    color: var(--vh-text-muted);
 }
 .vh-step-active .vh-step-icon {
-    background: linear-gradient(135deg, #6366f1, #818cf8);
+    background: linear-gradient(135deg, #6C5CE7, #A29BFE);
     color: white;
-    box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+    box-shadow: 0 4px 16px rgba(108, 92, 231, 0.35);
     animation: stepPulse 2s ease-in-out infinite;
 }
 .vh-step-done .vh-step-icon {
-    background: linear-gradient(135deg, #10b981, #34d399);
+    background: linear-gradient(135deg, #00B894, #00D4AA);
     color: white;
-    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+    box-shadow: 0 4px 16px rgba(0, 184, 148, 0.25);
 }
 .vh-step-connector {
     height: 2px;
     flex: 1;
-    background: #e2e8f0;
+    background: rgba(0,0,0,0.06);
     margin: 0 4px;
     border-radius: 1px;
-    transition: background 0.4s ease;
+    transition: background 0.5s var(--vh-transition);
 }
 .vh-step-connector-done {
-    background: linear-gradient(90deg, #10b981, #34d399);
+    background: linear-gradient(90deg, #00B894, #00D4AA) !important;
+    box-shadow: 0 0 4px rgba(0, 184, 148, 0.2);
 }
 .vh-step-connector-active {
-    background: linear-gradient(90deg, #10b981, #6366f1);
+    background: linear-gradient(90deg, #00B894, #6C5CE7) !important;
 }
 
 /* ---- Toast Notification ---- */
@@ -230,23 +342,24 @@ body {
     align-items: flex-start;
     gap: 14px;
     animation: toastIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-    backdrop-filter: blur(16px);
-    box-shadow: 0 16px 48px rgba(0,0,0,0.12), 0 4px 12px rgba(0,0,0,0.06);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.1);
 }
 .vh-toast-success {
-    background: linear-gradient(135deg, rgba(16,185,129,0.95), rgba(5,150,105,0.95));
+    background: rgba(0, 184, 148, 0.95);
     color: white;
-    border: 1px solid rgba(255,255,255,0.15);
+    border: 1px solid rgba(0, 212, 170, 0.3);
 }
 .vh-toast-error {
-    background: linear-gradient(135deg, rgba(239,68,68,0.95), rgba(220,38,38,0.95));
+    background: rgba(231, 76, 60, 0.95);
     color: white;
-    border: 1px solid rgba(255,255,255,0.15);
+    border: 1px solid rgba(255, 107, 107, 0.3);
 }
 .vh-toast-info {
-    background: linear-gradient(135deg, rgba(99,102,241,0.95), rgba(79,70,229,0.95));
+    background: rgba(108, 92, 231, 0.95);
     color: white;
-    border: 1px solid rgba(255,255,255,0.15);
+    border: 1px solid rgba(162, 155, 254, 0.3);
 }
 .vh-toast-icon {
     font-size: 24px;
@@ -265,7 +378,7 @@ body {
 }
 .vh-toast-close {
     cursor: pointer;
-    opacity: 0.6;
+    opacity: 0.7;
     transition: opacity 0.2s;
     font-size: 18px;
     flex-shrink: 0;
@@ -293,47 +406,92 @@ body {
 
 /* ---- Input ---- */
 .vh-input .q-field__control {
-    border-radius: 12px !important;
+    border-radius: 10px !important;
+    background: rgba(0,0,0,0.02) !important;
+    color: var(--vh-text) !important;
+}
+.vh-input .q-field__label {
+    color: var(--vh-text-secondary) !important;
+}
+.vh-input .q-field__native,
+.vh-input .q-field__input {
+    color: var(--vh-text) !important;
+}
+.vh-input .q-field__native::placeholder,
+.vh-input .q-field__input::placeholder {
+    color: var(--vh-text-muted) !important;
 }
 .vh-input .q-field--outlined .q-field__control:before {
-    border-color: var(--vh-border) !important;
+    border-color: rgba(0,0,0,0.1) !important;
 }
 .vh-input .q-field--outlined .q-field__control:hover:before {
-    border-color: var(--vh-primary-light) !important;
+    border-color: rgba(108, 92, 231, 0.35) !important;
 }
 .vh-input .q-field--focused .q-field__control:after {
     border-color: var(--vh-primary) !important;
     border-width: 2px !important;
 }
+/* Focus glow ring */
+.vh-input .q-field--focused .q-field__control {
+    box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.12) !important;
+}
+
+/* ---- Select (for sort dropdown) ---- */
+.vh-select .q-field__control {
+    border-radius: 10px !important;
+    background: var(--vh-surface) !important;
+    color: var(--vh-text) !important;
+}
+.vh-select .q-field__label {
+    color: var(--vh-text-secondary) !important;
+}
+.vh-select .q-field__native {
+    color: var(--vh-text) !important;
+}
+.vh-select .q-field--outlined .q-field__control:before {
+    border-color: rgba(0,0,0,0.1) !important;
+}
+.vh-select .q-field--outlined .q-field__control:hover:before {
+    border-color: rgba(108, 92, 231, 0.35) !important;
+}
 
 /* ---- Empty State ---- */
 .vh-empty-icon {
     width: 120px; height: 120px;
-    border-radius: 32px;
-    background: linear-gradient(135deg, #ede9fe 0%, #e0e7ff 100%);
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(108,92,231,0.12) 0%, rgba(108,92,231,0.03) 70%);
     display: flex; align-items: center; justify-content: center;
     margin: 0 auto;
+    position: relative;
+}
+.vh-empty-icon::after {
+    content: '';
+    position: absolute;
+    inset: -8px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(108,92,231,0.06) 0%, transparent 70%);
+    animation: emptyPulse 3s ease-in-out infinite;
 }
 
 /* ---- Animations ---- */
 @keyframes statusPulse {
     0%, 100% { opacity: 0.3; transform: scale(1); }
-    50% { opacity: 0; transform: scale(1.8); }
+    50% { opacity: 0; transform: scale(2); }
 }
 @keyframes stepPulse {
-    0%, 100% { box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35); }
-    50% { box-shadow: 0 4px 24px rgba(99, 102, 241, 0.55); }
+    0%, 100% { box-shadow: 0 4px 16px rgba(108, 92, 231, 0.35); }
+    50% { box-shadow: 0 4px 28px rgba(108, 92, 231, 0.55); }
 }
 @keyframes toastIn {
-    from { opacity: 0; transform: translateX(80px) scale(0.95); }
-    to { opacity: 1; transform: translateX(0) scale(1); }
+    from { opacity: 0; transform: translateX(80px) scale(0.95); filter: blur(4px); }
+    to { opacity: 1; transform: translateX(0) scale(1); filter: blur(0); }
 }
 @keyframes toastOut {
     from { opacity: 1; transform: translateX(0) scale(1); }
     to { opacity: 0; transform: translateX(80px) scale(0.9); }
 }
 @keyframes celebrateIn {
-    from { opacity: 0; transform: scale(0.9) translateY(30px); }
+    from { opacity: 0; transform: scale(0.92) translateY(30px); }
     to { opacity: 1; transform: scale(1) translateY(0); }
 }
 @keyframes celebrateBounce {
@@ -348,35 +506,99 @@ body {
     from { opacity: 0; transform: translateY(16px); }
     to { opacity: 1; transform: translateY(0); }
 }
+@keyframes emptyPulse {
+    0%, 100% { opacity: 0.5; transform: scale(1); }
+    50% { opacity: 0.2; transform: scale(1.15); }
+}
+@keyframes staggerIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
 .vh-fade-in {
-    animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    animation: fadeInUp 0.4s var(--vh-transition);
 }
 
 /* ---- Scrollbar ---- */
-::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.2); }
 
 /* ---- Badge ---- */
 .vh-badge {
     padding: 3px 10px;
-    border-radius: 8px;
+    border-radius: 6px;
     font-size: 12px;
     font-weight: 600;
     letter-spacing: 0.02em;
 }
 .vh-badge-green {
-    background: rgba(16, 185, 129, 0.1);
-    color: #059669;
+    background: rgba(0, 184, 148, 0.1);
+    color: #00956E;
 }
 .vh-badge-red {
-    background: rgba(239, 68, 68, 0.1);
-    color: #dc2626;
+    background: rgba(231, 76, 60, 0.1);
+    color: #C0392B;
 }
 .vh-badge-grey {
-    background: rgba(148, 163, 184, 0.15);
-    color: #64748b;
+    background: rgba(0,0,0,0.04);
+    color: var(--vh-text-muted);
+}
+
+/* ---- Divider ---- */
+.vh-divider {
+    width: 100%;
+    height: 1px;
+    background: rgba(0,0,0,0.06);
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 768px) {
+    .vh-header { padding: 0 16px !important; }
+    .vh-responsive-grid {
+        grid-template-columns: 1fr !important;
+    }
+    .vh-stepper {
+        padding: 16px !important;
+    }
+}
+
+/* ---- Quasar overrides for light theme ---- */
+.q-card {
+    color: var(--vh-text) !important;
+}
+.q-field__control {
+    color: var(--vh-text) !important;
+}
+.q-field__native {
+    color: var(--vh-text) !important;
+}
+.q-expansion-item {
+    color: var(--vh-text) !important;
+}
+.q-expansion-item .q-item {
+    color: var(--vh-text) !important;
+}
+.q-expansion-item .q-item__label {
+    color: var(--vh-text) !important;
+}
+.q-dialog .q-card {
+    background: var(--vh-surface) !important;
+    color: var(--vh-text) !important;
+}
+/* Quasar select dropdown menu */
+.q-menu {
+    background: var(--vh-surface) !important;
+    color: var(--vh-text) !important;
+    border: 1px solid var(--vh-border) !important;
+    border-radius: 10px !important;
+    box-shadow: var(--vh-shadow-md) !important;
+}
+.q-item {
+    color: var(--vh-text) !important;
+}
+.q-item--active, .q-item.q-router-link--active {
+    color: var(--vh-primary) !important;
 }
 </style>
 """
@@ -428,19 +650,19 @@ function vhDismissToast(el) {
 
 // Confetti burst for celebrations
 function vhConfetti(targetEl) {
-    var colors = ['#6366f1','#818cf8','#06b6d4','#10b981','#f59e0b','#ec4899'];
+    var colors = ['#6C5CE7','#A29BFE','#00B894','#00D4AA','#F39C12','#E74C3C','#74B9FF'];
     var rect = targetEl.getBoundingClientRect();
     var cx = rect.left + rect.width / 2;
     var cy = rect.top + rect.height / 2;
 
-    for (var i = 0; i < 24; i++) {
+    for (var i = 0; i < 30; i++) {
         var p = document.createElement('div');
         p.className = 'vh-confetti-particle';
         p.style.background = colors[Math.floor(Math.random() * colors.length)];
         p.style.left = cx + 'px';
         p.style.top = cy + 'px';
-        var angle = (Math.PI * 2 * i) / 24 + (Math.random() - 0.5) * 0.5;
-        var dist = 60 + Math.random() * 80;
+        var angle = (Math.PI * 2 * i) / 30 + (Math.random() - 0.5) * 0.5;
+        var dist = 60 + Math.random() * 100;
         p.style.setProperty('--tx', Math.cos(angle) * dist + 'px');
         p.style.setProperty('--ty', Math.sin(angle) * dist - 40 + 'px');
         p.style.animation = 'confettiFall ' + (0.8 + Math.random() * 0.7) + 's cubic-bezier(0.4,0,0.2,1) forwards';
@@ -455,6 +677,7 @@ function vhConfetti(targetEl) {
 
 def apply_theme():
     """Call once per page to inject the VibeHub design system."""
+    ui.dark_mode(False)
     ui.colors(primary=BRAND["primary"])
     ui.add_head_html(_FONTS_HTML)
     ui.add_head_html(_GLOBAL_CSS)

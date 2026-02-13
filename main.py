@@ -21,21 +21,21 @@ log = root_logger
 
 
 async def resurrect_all_tools():
-    """启动恢复：拉起所有 registry 中 active 的工具"""
+    """启动恢复：拉起所有 registry 中 active 或 error 的工具"""
     tools = registry.list_tools()
-    active_tools = [t for t in tools if t.get("status") == "active"]
+    recoverable = [t for t in tools if t.get("status") in ("active", "error")]
 
-    if not active_tools:
+    if not recoverable:
         log.info("没有需要恢复的工具")
         return
 
-    log.info(f"开始恢复 {len(active_tools)} 个工具...")
+    log.info(f"开始恢复 {len(recoverable)} 个工具...")
 
-    for tool in active_tools:
+    for tool in recoverable:
         slug = tool["slug"]
         try:
             pid, port = process_manager.start_tool(slug)
-            ready = await process_manager.wait_for_tool_ready(slug, timeout=8.0)
+            ready = await process_manager.wait_for_tool_ready(slug, timeout=30.0)
 
             if ready:
                 await caddy_gateway.add_route(slug, port)
