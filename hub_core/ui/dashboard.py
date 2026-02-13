@@ -128,7 +128,7 @@ def create_dashboard():
                                         with ui.dialog() as dlg, ui.card().style(
                                             "min-width: 340px; border-radius: 16px; "
                                             "background: var(--vh-surface); "
-                                            "box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08), 0 24px 48px rgba(0,0,0,0.5);"
+                                            "box-shadow: inset 0 0 0 1px var(--vh-glass-border), var(--vh-shadow-xl);"
                                         ):
                                             ui.label("重命名工具").classes(
                                                 "text-lg font-semibold"
@@ -284,24 +284,32 @@ def create_dashboard():
         with ui.row().classes("items-center gap-4"):
             # Logo
             with ui.row().classes("items-center gap-2"):
-                ui.icon("hub", size="30px").classes("text-white vh-header-logo")
+                ui.icon("hub", size="30px").classes("vh-header-logo")
                 ui.label("VibeHub").classes(
-                    "text-2xl font-bold text-white tracking-tight vh-header-logo"
+                    "text-2xl font-bold tracking-tight vh-header-logo"
                 )
             # Divider
-            ui.element("div").style(
-                "width:1px; height:24px; background:rgba(255,255,255,0.12);"
+            ui.element("div").classes("vh-header-divider").style(
+                "width:1px; height:24px; background: var(--vh-border);"
             )
             ui.label("AI 工具工坊").classes("text-sm font-medium").style(
-                "color: rgba(255,255,255,0.5);"
+                "color: var(--vh-text-muted);"
             )
 
         with ui.row().classes("gap-3"):
+            # Theme toggle button
+            ui.button(
+                icon="dark_mode",
+                on_click=lambda: ui.run_javascript("vhToggleTheme()"),
+            ).props("flat round size=sm").classes(
+                "vh-theme-toggle"
+            ).style("color: var(--vh-text-secondary);").tooltip("切换主题")
+
             ui.button(
                 icon="refresh", on_click=refresh_cards
             ).props(
-                "flat round text-color=white size=sm"
-            ).style("color: rgba(255,255,255,0.6);").tooltip("刷新")
+                "flat round size=sm"
+            ).style("color: var(--vh-text-secondary);").tooltip("刷新")
             ui.button(
                 "新建工具", icon="add", on_click=lambda: ui.navigate.to("/builder")
             ).classes("vh-btn-header").props("no-caps unelevated")

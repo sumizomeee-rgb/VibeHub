@@ -95,15 +95,24 @@ def create_builder(edit_slug: str | None = None):
             with ui.row().classes("items-center gap-2 cursor-pointer").on(
                 "click", lambda: ui.navigate.to("/")
             ):
-                ui.icon("hub", size="30px").classes("text-white vh-header-logo")
+                ui.icon("hub", size="30px").classes("vh-header-logo")
                 ui.label("VibeHub").classes(
-                    "text-2xl font-bold text-white tracking-tight vh-header-logo"
+                    "text-2xl font-bold tracking-tight vh-header-logo"
                 )
-        ui.button(
-            "返回看板", icon="arrow_back", on_click=lambda: ui.navigate.to("/")
-        ).props("flat text-color=white no-caps").style(
-            "font-weight: 500; border-radius: 10px; color: rgba(255,255,255,0.7);"
-        )
+        with ui.row().classes("gap-3"):
+            # Theme toggle button
+            ui.button(
+                icon="dark_mode",
+                on_click=lambda: ui.run_javascript("vhToggleTheme()"),
+            ).props("flat round size=sm").classes(
+                "vh-theme-toggle"
+            ).style("color: var(--vh-text-secondary);").tooltip("切换主题")
+
+            ui.button(
+                "返回看板", icon="arrow_back", on_click=lambda: ui.navigate.to("/")
+            ).props("flat no-caps").style(
+                "font-weight: 500; border-radius: 10px; color: var(--vh-text-secondary);"
+            )
 
     # ---- Page container ----
     page_container = ui.column().classes("w-full max-w-3xl mx-auto p-8 gap-6")
@@ -164,7 +173,7 @@ def create_builder(edit_slug: str | None = None):
             # 如果是编辑模式，显示当前代码
             if existing_code:
                 with ui.expansion("查看当前代码", icon="code").classes("w-full").style(
-                    "box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08); border-radius: 16px; "
+                    "box-shadow: inset 0 0 0 1px var(--vh-border); border-radius: 16px; "
                     "color: var(--vh-text);"
                 ):
                     ui.code(existing_code, language="python").classes(
@@ -206,9 +215,7 @@ def create_builder(edit_slug: str | None = None):
                     ui.element("div").classes("vh-terminal-dot").style("background: #ff5f57;")
                     ui.element("div").classes("vh-terminal-dot").style("background: #febc2e;")
                     ui.element("div").classes("vh-terminal-dot").style("background: #28c840;")
-                    ui.label("部署日志").classes("text-xs font-medium ml-2").style(
-                        "color: rgba(255,255,255,0.5);"
-                    )
+                    ui.label("部署日志").classes("text-xs font-medium ml-2 vh-terminal-title")
 
             log_area = ui.log(max_lines=50).classes("w-full h-64 vh-terminal").style(
                 "border-top-left-radius: 0 !important; border-top-right-radius: 0 !important; margin-top: -1px;"
