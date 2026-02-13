@@ -3,7 +3,7 @@ setlocal EnableDelayedExpansion
 title VibeHub
 echo.
 echo  ========================================
-echo           VibeHub v1.0 Starting
+echo           VibeHub v2.0 Starting
 echo  ========================================
 echo.
 
@@ -23,7 +23,7 @@ if not defined CLAUDE_CODE_GIT_BASH_PATH (
 :: ============================================
 :: Clean up old processes
 :: ============================================
-echo [0/4] Cleaning up old processes...
+echo [0/5] Cleaning up old processes...
 taskkill /IM caddy.exe /F >nul 2>&1
 :: Kill any leftover VibeHub python on port 8080
 for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":8080" ^| findstr "LISTENING"') do (
@@ -36,7 +36,7 @@ echo.
 :: ============================================
 :: Environment Check
 :: ============================================
-echo [1/4] Checking environment...
+echo [1/5] Checking environment...
 
 set "ENV_OK=1"
 
@@ -113,9 +113,30 @@ if not exist "%VIBEHUB_ROOT%data\registry.json" (
 )
 
 :: ============================================
+:: Build frontend (if needed)
+:: ============================================
+echo [2/5] Checking frontend...
+if not exist "%VIBEHUB_ROOT%frontend\dist\index.html" (
+    echo   Frontend not built, building now...
+    cd /d "%VIBEHUB_ROOT%frontend"
+    call npm install
+    call npm run build
+    cd /d "%VIBEHUB_ROOT%"
+    if not exist "%VIBEHUB_ROOT%frontend\dist\index.html" (
+        echo   [X] Frontend build failed!
+        pause
+        exit /b 1
+    )
+    echo   Frontend built successfully
+) else (
+    echo   Frontend already built
+)
+echo.
+
+:: ============================================
 :: Firewall rule
 :: ============================================
-echo [2/4] Configuring firewall...
+echo [3/5] Configuring firewall...
 netsh advfirewall firewall add rule name="VibeHub" dir=in action=allow protocol=TCP localport=9529 >nul 2>&1
 echo   Port 9529 allowed
 echo.
@@ -123,7 +144,7 @@ echo.
 :: ============================================
 :: Start Caddy
 :: ============================================
-echo [3/4] Starting Caddy gateway...
+echo [4/5] Starting Caddy gateway...
 start /B "" "%VIBEHUB_ROOT%bin\caddy.exe" run 2>"%VIBEHUB_ROOT%data\logs\caddy.log"
 timeout /t 2 /nobreak >nul
 echo   Caddy Admin API ready (localhost:2019)
@@ -132,7 +153,7 @@ echo.
 :: ============================================
 :: Start VibeHub
 :: ============================================
-echo [4/4] Starting VibeHub...
+echo [5/5] Starting VibeHub...
 echo.
 echo   LAN access:  http://localhost:9529/
 echo   Internal UI: http://127.0.0.1:8080/

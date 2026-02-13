@@ -35,3 +35,7 @@ requirementDocument/
 runtime/
 *.log
 nul
+
+# Frontend
+frontend/node_modules/
+frontend/dist/

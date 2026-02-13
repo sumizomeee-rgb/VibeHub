@@ -1,12 +1,17 @@
 import asyncio
 import logging
 import sys
+from pathlib import Path
+from contextlib import asynccontextmanager
 
-from nicegui import ui, app
+from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 from hub_core import config, registry, process_manager, caddy_gateway
+from hub_core.api_adapter import router as api_router, build_ws_endpoint
 
-# Log to both file and console
+# ---- Logging ----
 log_format = "%(asctime)s [%(levelname)s] %(name)s - %(message)s"
 file_handler = logging.FileHandler(str(config.DATA_DIR / "logs" / "hub.log"), encoding="utf-8")
 file_handler.setFormatter(logging.Formatter(log_format))
@@ -48,53 +53,53 @@ async def resurrect_all_tools():
             log.error(f"[{slug}] 恢复失败: {e}")
 
 
-@app.on_startup
-async def startup():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
     log.info("VibeHub 启动中...")
     try:
         await caddy_gateway.init_server()
         log.info(f"Caddy 网关已初始化 → 0.0.0.0:{config.GATEWAY_PORT}")
     except Exception as e:
         log.error(f"Caddy 初始化失败: {e}")
-        return
 
     await resurrect_all_tools()
     log.info("VibeHub 启动完成")
-
-
-@app.on_shutdown
-async def shutdown():
+    yield
+    # Shutdown
     log.info("VibeHub 关闭中...")
     process_manager.stop_all()
     await caddy_gateway.close()
     log.info("VibeHub 已关闭")
 
 
-# ---- 页面路由 ----
+app = FastAPI(lifespan=lifespan)
 
-@ui.page("/")
-def dashboard_page():
-    from hub_core.ui.dashboard import create_dashboard
-    create_dashboard()
+# 1. API Router（最先挂载）
+app.include_router(api_router)
+
+# 2. WebSocket 端点
+app.add_api_websocket_route("/ws/build/{task_id}", build_ws_endpoint)
+
+# 3. SPA 静态文件（最后挂载）
+_DIST_DIR = Path(__file__).parent / "frontend" / "dist"
+
+if _DIST_DIR.exists():
+    app.mount("/assets", StaticFiles(directory=str(_DIST_DIR / "assets")), name="assets")
+
+    @app.get("/{full_path:path}")
+    async def spa_fallback(full_path: str):
+        """SPA fallback: 所有非 API/WS 路径返回 index.html"""
+        file_path = _DIST_DIR / full_path
+        if file_path.is_file():
+            return FileResponse(str(file_path))
+        return FileResponse(str(_DIST_DIR / "index.html"))
+else:
+    @app.get("/")
+    async def no_frontend():
+        return {"error": "前端未构建，请执行 cd frontend && npm run build"}
 
 
-@ui.page("/builder")
-def builder_page():
-    from hub_core.ui.builder import create_builder
-    create_builder()
-
-
-@ui.page("/builder/{slug}")
-def builder_edit_page(slug: str):
-    from hub_core.ui.builder import create_builder
-    create_builder(edit_slug=slug)
-
-
-ui.run(
-    host="127.0.0.1",
-    port=config.HUB_INTERNAL_PORT,
-    title="VibeHub",
-    favicon="static/favicon.svg",
-    reload=False,
-    show=False,
-)
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="127.0.0.1", port=config.HUB_INTERNAL_PORT)

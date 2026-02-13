@@ -1,0 +1,90 @@
+@import "tailwindcss";
+
+/* VibeHub Design Tokens */
+:root {
+  --vh-font-sans: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  --vh-font-mono: "JetBrains Mono", monospace;
+  --vh-radius: 16px;
+  --vh-radius-sm: 10px;
+  --vh-radius-lg: 20px;
+}
+
+/* Light Theme */
+[data-theme="light"],
+:root {
+  --vh-primary: #4f46e5;
+  --vh-primary-light: #818cf8;
+  --vh-primary-dark: #3730a3;
+  --vh-accent: #059669;
+  --vh-success: #059669;
+  --vh-warning: #d97706;
+  --vh-error: #dc2626;
+  --vh-info: #2563eb;
+  --vh-surface: #ffffff;
+  --vh-surface-hover: #fafafa;
+  --vh-bg: #fbfbfb;
+  --vh-bg-secondary: #f5f5f5;
+  --vh-text: #18181b;
+  --vh-text-secondary: #52525b;
+  --vh-text-muted: #a1a1aa;
+  --vh-border: rgba(0, 0, 0, 0.06);
+  --vh-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --vh-shadow-md: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --vh-shadow-glow: 0 0 0 3px rgba(79, 70, 229, 0.08);
+}
+
+/* Dark Theme */
+[data-theme="dark"] {
+  --vh-primary: #818cf8;
+  --vh-primary-light: #a5b4fc;
+  --vh-primary-dark: #6366f1;
+  --vh-accent: #34d399;
+  --vh-success: #34d399;
+  --vh-warning: #fbbf24;
+  --vh-error: #f87171;
+  --vh-info: #60a5fa;
+  --vh-surface: #27272a;
+  --vh-surface-hover: #3f3f46;
+  --vh-bg: #09090b;
+  --vh-bg-secondary: #18181b;
+  --vh-text: #fafafa;
+  --vh-text-secondary: #a1a1aa;
+  --vh-text-muted: #71717a;
+  --vh-border: rgba(255, 255, 255, 0.06);
+  --vh-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --vh-shadow-md: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --vh-shadow-glow: 0 0 24px rgba(129, 140, 248, 0.15);
+}
+
+body {
+  font-family: var(--vh-font-sans);
+  background: var(--vh-bg);
+  color: var(--vh-text);
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.011em;
+  margin: 0;
+}
+
+/* Status pulse animation */
+@keyframes pulse-green {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.5); }
+  50% { box-shadow: 0 0 0 6px rgba(5, 150, 105, 0); }
+}
+.animate-pulse-green {
+  animation: pulse-green 2s ease-in-out infinite;
+}
+
+/* Fade in */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Stagger children */
+@keyframes staggerIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}

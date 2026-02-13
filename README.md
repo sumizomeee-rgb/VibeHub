@@ -12,7 +12,7 @@ VibeHub 是一个本地部署的 **AI Web 工具自动化平台**。它将 Claud
 2. **代码生成** — Claude CLI 根据详细的 Prompt 规范生成完整的 Python Web 工具
 3. **自动测试** — 自动生成并运行测试脚本，未通过则进入自愈修复循环（最多 3 次）
 4. **一键部署** — 通过 `uv` 启动工具进程，Caddy 反向代理自动注册路由
-5. **统一管理** — NiceGUI 构建的现代化 Dashboard，支持启动/停止/重启/删除/重命名
+5. **统一管理** — React + Tailwind 构建的现代化 Dashboard，支持启动/停止/重启/删除/重命名
 
 整个流程从需求到上线，完全自动化。
 
@@ -34,13 +34,14 @@ VibeHub 是一个本地部署的 **AI Web 工具自动化平台**。它将 Claud
     │                         │
     ▼                         ▼
 ┌──────────┐         ┌──────────────┐
-│ NiceGUI  │         │ 工具子进程    │
+│ FastAPI  │         │ 工具子进程    │
 │ Hub Core │         │ (FastAPI +   │
 │ port 8080│         │  Uvicorn)    │
 └──────────┘         └──────────────┘
     │
-    ├── Dashboard (看板页)
-    ├── Builder (构建台)
+    ├── React SPA (Dashboard + Builder)
+    ├── REST API (/api/*)
+    ├── WebSocket (/ws/build/*)
     ├── Claude Agent (代码生成)
     └── Guard Agent (需求审核)
 ```
@@ -51,11 +52,11 @@ VibeHub 是一个本地部署的 **AI Web 工具自动化平台**。它将 Claud
 
 ```
 VibeHub/
-├── main.py                    # 应用入口，NiceGUI 页面路由
+├── main.py                    # 应用入口，FastAPI + SPA 静态托管
 ├── pyproject.toml             # 项目元数据和依赖声明
 ├── start.bat                  # Windows 一键启动脚本
 │
-├── hub_core/                  # 核心模块
+├── hub_core/                  # 核心后端模块
 │   ├── config.py              # 全局配置（路径、端口、CLI 检测）
 │   ├── registry.py            # 工具注册表（JSON 持久化）
 │   ├── process_manager.py     # 子进程管理（启动/停止/健康检查）
@@ -63,23 +64,41 @@ VibeHub/
 │   ├── claude_agent.py        # Claude CLI 代码生成 & 自愈修复
 │   ├── guard_agent.py         # 需求审核 Agent（请求分类过滤）
 │   ├── port_manager.py        # 空闲端口分配
-│   │
-│   └── ui/                    # 前端界面（NiceGUI）
-│       ├── theme.py           # 设计系统（CSS/JS/动画/Toast）
-│       ├── dashboard.py       # 看板页：卡片式工具管理
-│       └── builder.py         # 构建台：需求 → 生成 → 测试 → 部署
+│   ├── api_adapter.py         # REST API + WebSocket 端点
+│   └── build_manager.py       # 构建任务管理器（异步 + WS 推送）
+│
+├── frontend/                  # React 前端（Vite + Tailwind）
+│   ├── package.json
+│   ├── vite.config.js
+│   ├── index.html
+│   └── src/
+│       ├── main.jsx
+│       ├── App.jsx
+│       ├── index.css           # Tailwind + 设计令牌（明暗主题）
+│       ├── pages/
+│       │   ├── Dashboard.jsx   # 工具看板
+│       │   └── Builder.jsx     # 构建台
+│       ├── components/
+│       │   ├── Header.jsx
+│       │   ├── ToolCard.jsx
+│       │   ├── ProgressStepper.jsx
+│       │   └── LogConsole.jsx
+│       ├── api/
+│       │   ├── tools.js
+│       │   └── builder.js
+│       └── ws/
+│           └── build.js
 │
 ├── projects/                  # AI 生成的工具目录
-│   ├── pdf_to_images_converter/   # 示例：PDF 转图片工具
-│   └── images_to_pdf_converter/   # 示例：图片转 PDF 工具
+│   └── {slug}/main.py
 │
 ├── bin/                       # 外部二进制（不纳入版本控制）
-│   ├── uv.exe                 # Python 脚本运行器
-│   └── caddy.exe              # HTTP 反向代理服务器
+│   ├── uv.exe
+│   └── caddy.exe
 │
 ├── data/                      # 运行时数据（不纳入版本控制）
-│   ├── registry.json          # 工具注册信息
-│   └── logs/                  # 日志目录
+│   ├── registry.json
+│   └── logs/
 │
 └── runtime/                   # uv 缓存目录（不纳入版本控制）
 ```
@@ -101,22 +120,20 @@ VibeHub/
 - 合法请求返回 `PASS|slug|display_name`
 - 非法请求（闲聊、攻击等）返回 `REJECT|原因`
 
-### `caddy_gateway.py` — Caddy 网关管理
+### `api_adapter.py` — REST API 适配层
 
-- 通过 Caddy Admin API 动态管理路由规则
-- 每个工具注册为 `/tools/{slug}/*` 路径，反向代理到对应端口
-- Hub 主面板作为 fallback 路由，匹配 `/*`
+- `GET /api/tools` — 工具列表（含实时存活状态）
+- `POST /api/tools/{slug}/start|stop|restart` — 进程控制
+- `DELETE /api/tools/{slug}` — 删除工具
+- `POST /api/build` — 启动构建任务
+- `WebSocket /ws/build/{task_id}` — 构建进度实时推送
 
-### `process_manager.py` — 子进程管理
+### `build_manager.py` — 构建任务管理器
 
-- 使用 `uv run` 启动工具脚本（自动解析 PEP 723 依赖）
-- 进程树级别的停止和清理（基于 psutil）
-- 健康检查：等待端口可连接后才注册路由
-
-### `registry.py` — 工具注册表
-
-- JSON 文件持久化，记录每个工具的名称、路径、状态、创建时间
-- 支持状态管理：`active` / `stopped` / `error`
+- 将构建流程（审核→生成→测试→启动→路由→完成）封装为异步任务
+- 通过 WebSocket 实时推送 6 步进度和日志
+- 支持 per-slug 锁防止并发构建冲突
+- 15 秒心跳保活，支持断线重连恢复
 
 ---
 
@@ -126,7 +143,7 @@ VibeHub/
 
 | 依赖 | 说明 |
 |------|------|
-| **Node.js + npm** | Claude CLI 运行依赖 |
+| **Node.js + npm** | Claude CLI 运行依赖 + 前端构建 |
 | **Claude CLI** | `npm install -g @anthropic-ai/claude-code` |
 | **Git Bash** | Claude CLI 在 Windows 上需要 bash 环境 |
 | **uv.exe** | Python 脚本运行器，放入 `bin/` 目录，[下载地址](https://github.com/astral-sh/uv/releases) |
@@ -142,9 +159,9 @@ start.bat
 启动脚本会自动完成：
 1. 检查环境依赖（Node.js, npm, Claude CLI, Git Bash, uv, caddy）
 2. 初始化数据目录
-3. 配置防火墙规则（端口 9529）
-4. 启动 Caddy 网关
-5. 启动 VibeHub 主服务
+3. 构建前端（首次启动自动执行 `npm install && npm run build`）
+4. 配置防火墙规则（端口 9529）
+5. 启动 Caddy 网关 + VibeHub 主服务
 
 ### 访问
 
@@ -156,11 +173,11 @@ start.bat
 ## 🎨 界面特性
 
 - **现代 SaaS 风格** — Inter 字体、圆角卡片、渐变配色
+- **明暗双主题** — 一键切换，localStorage 持久化
 - **实时状态指示** — 运行中(绿色脉冲)、异常(红色)、已停止(灰色)
 - **部署进度条** — 6 步进度可视化（审核 → 生成 → 测试 → 启动 → 路由 → 完成）
-- **终端风格日志** — JetBrains Mono 字体，实时展示部署过程
-- **成功庆祝动画** — 彩纸粒子特效 + Toast 通知 + 浏览器通知
-- **暗色终端 + 亮色卡片** — 混合主题设计
+- **终端风格日志** — JetBrains Mono 字体，实时 WebSocket 推送
+- **Bento Grid 布局** — 运行中工具自动扩展为双列卡片
 
 ---
 
@@ -168,7 +185,8 @@ start.bat
 
 | 组件 | 技术 |
 |------|------|
-| 后端框架 | [NiceGUI](https://nicegui.io/) (基于 FastAPI) |
+| 后端框架 | [FastAPI](https://fastapi.tiangolo.com/) + [Uvicorn](https://www.uvicorn.org/) |
+| 前端框架 | [React 18](https://react.dev/) + [Vite](https://vite.dev/) + [Tailwind CSS 4](https://tailwindcss.com/) |
 | AI 引擎 | Claude CLI (`@anthropic-ai/claude-code`) |
 | 工具运行时 | [uv](https://github.com/astral-sh/uv) + PEP 723 |
 | 反向代理 | [Caddy](https://caddyserver.com/) (Admin API 动态配置) |
