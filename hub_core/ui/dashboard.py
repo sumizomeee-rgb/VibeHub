@@ -75,9 +75,9 @@ def create_dashboard():
                     ).style("color: var(--vh-text-muted);")
                 return
 
-            # Bento Grid: running tools span 2 columns
+            # Bento Grid: running tools span 2 columns (Linear.app style: gap-8 = 32px)
             with ui.element("div").classes("w-full vh-responsive-grid").style(
-                "display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;"
+                "display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px;"
             ):
                 for idx, tool in enumerate(tools):
                     slug = tool["slug"]
