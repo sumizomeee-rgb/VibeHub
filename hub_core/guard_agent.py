@@ -53,11 +53,8 @@ def guard_check(user_input: str) -> tuple[bool, str]:
     stderr = (result.stderr or "").strip()
     log.info(f"Guard CLI rc={result.returncode} stdout={stdout[:200]!r} stderr={stderr[:200]!r}")
 
-    if result.returncode != 0:
-        log.error(f"Guard CLI failed: {stderr[:300]}")
-        return False, f"Review failed: {stderr[:100]}"
-
-    # Extract PASS or REJECT line from output
+    # 先尝试解析 stdout —— Claude CLI 可能在 Node.js 清理阶段崩溃
+    # (libuv assertion failure)，但 stdout 中已包含有效结果
     for line in stdout.splitlines():
         line = line.strip()
         if line.startswith("PASS|"):
@@ -65,13 +62,22 @@ def guard_check(user_input: str) -> tuple[bool, str]:
             if len(parts) == 3:
                 slug = parts[1].strip().replace("-", "_")
                 name = parts[2].strip()
+                if result.returncode != 0:
+                    log.warning(f"Guard CLI rc={result.returncode} 但 stdout 有效，忽略退出码")
                 log.info(f"Guard PASS: slug={slug}, name={name}")
                 return True, f"{slug}|{name}"
         elif line.startswith("REJECT|"):
             parts = line.split("|", 1)
             reason = parts[1].strip() if len(parts) == 2 else "Request rejected"
+            if result.returncode != 0:
+                log.warning(f"Guard CLI rc={result.returncode} 但 stdout 有效，忽略退出码")
             log.info(f"Guard REJECT: {reason}")
             return False, reason
+
+    # stdout 无有效结果时才按错误处理
+    if result.returncode != 0:
+        log.error(f"Guard CLI failed: {stderr[:300]}")
+        return False, f"Review failed: {stderr[:100]}"
 
     log.warning(f"Guard output not parseable: {stdout[:300]!r}")
     return False, "Unable to parse request. Please describe a specific tool."

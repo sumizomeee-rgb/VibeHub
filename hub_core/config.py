@@ -25,3 +25,4 @@ if "CLAUDE_CODE_GIT_BASH_PATH" not in os.environ:
 # shutil.which resolves .cmd/.bat on Windows
 CLAUDE_CMD = shutil.which("claude") or "claude"
 MAX_HEAL_RETRIES = 3
+RESTART_EXIT_CODE = 42

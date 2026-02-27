@@ -5,6 +5,10 @@ VibeHub API Adapter — REST + WebSocket 端点
 
 import asyncio
 import logging
+import os
+import subprocess
+import sys
+from pathlib import Path
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException
 from pydantic import BaseModel
@@ -172,3 +176,45 @@ async def build_ws_endpoint(ws: WebSocket, task_id: str):
         pass
     finally:
         task.unsubscribe(queue)
+
+
+# ---- 管理接口 ----
+
+@router.post("/admin/rebuild-frontend")
+async def rebuild_frontend():
+    """重新构建前端"""
+    frontend_dir = Path(__file__).resolve().parent.parent / "frontend"
+    if not (frontend_dir / "package.json").exists():
+        raise HTTPException(404, "前端目录不存在")
+
+    log.info("Admin: 开始重建前端...")
+    try:
+        result = subprocess.run(
+            ["npm", "run", "build"],
+            cwd=str(frontend_dir),
+            capture_output=True,
+            text=True,
+            timeout=120,
+            shell=True,
+        )
+        if result.returncode != 0:
+            log.error(f"前端构建失败: {result.stderr[:500]}")
+            raise HTTPException(500, f"构建失败: {result.stderr[:300]}")
+
+        log.info("Admin: 前端重建完成")
+        return {"ok": True, "message": "前端重建完成"}
+    except subprocess.TimeoutExpired:
+        raise HTTPException(500, "构建超时")
+
+
+@router.post("/admin/restart")
+async def restart_backend():
+    """重启后端（退出码42触发 start.bat 自动重启）"""
+    log.info("Admin: 收到重启请求，即将退出...")
+
+    async def _delayed_exit():
+        await asyncio.sleep(0.5)
+        os._exit(config.RESTART_EXIT_CODE)
+
+    asyncio.create_task(_delayed_exit())
+    return {"ok": True, "message": "后端正在重启..."}

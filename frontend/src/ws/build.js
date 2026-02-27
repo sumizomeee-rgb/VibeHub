@@ -4,6 +4,11 @@ export function connectBuildWS(taskId, { onStep, onLog, onComplete, onError, onH
   let ws = null;
   let closed = false;
 
+  function stop() {
+    closed = true;
+    ws?.close();
+  }
+
   function connect() {
     ws = new WebSocket(url);
 
@@ -19,9 +24,11 @@ export function connectBuildWS(taskId, { onStep, onLog, onComplete, onError, onH
             break;
           case "complete":
             onComplete?.(msg.data);
+            stop();
             break;
           case "error":
             onError?.(msg.message);
+            stop();
             break;
           case "heartbeat":
             onHeartbeat?.();
@@ -41,10 +48,5 @@ export function connectBuildWS(taskId, { onStep, onLog, onComplete, onError, onH
 
   connect();
 
-  return {
-    close() {
-      closed = true;
-      ws?.close();
-    },
-  };
+  return { close: stop };
 }

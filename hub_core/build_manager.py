@@ -11,7 +11,7 @@ from datetime import datetime
 from pathlib import Path
 
 from hub_core import config, registry, process_manager, caddy_gateway
-from hub_core.claude_agent import generate_tool_code, fix_tool_code, generate_test_code, run_test
+from hub_core.claude_agent import generate_tool_code, fix_tool_code, generate_test_code, run_test, _check_syntax
 from hub_core.guard_agent import guard_check
 
 log = logging.getLogger("vibehub.build")
@@ -173,14 +173,21 @@ async def _run_build_locked(task, slug, display_name, prompt, existing_code, edi
     retries = 0
     while not passed and retries < config.MAX_HEAL_RETRIES:
         retries += 1
-        task.emit_log(f"⚠️  测试未通过 (第{retries}次修复中...)")
-        task.emit_log(f"    错误: {test_log[:200]}")
 
-        code = await loop.run_in_executor(None, fix_tool_code, code, test_log)
-        _save_snapshot(slug, f"fix{retries}", code)
-        script_path.write_text(code, encoding="utf-8")
+        # 判断错误来源：测试脚本自身语法错误 vs 工具代码问题
+        is_test_script_error = "_test_main.py" in test_log and "SyntaxError" in test_log
 
-        test_code = await loop.run_in_executor(None, generate_test_code, code)
+        if is_test_script_error:
+            task.emit_log(f"⚠️  测试脚本语法错误，重新生成测试 (第{retries}次)")
+            test_code = await loop.run_in_executor(None, generate_test_code, code)
+        else:
+            task.emit_log(f"⚠️  测试未通过 (第{retries}次修复中...)")
+            task.emit_log(f"    错误: {test_log[:200]}")
+            code = await loop.run_in_executor(None, fix_tool_code, code, test_log)
+            _save_snapshot(slug, f"fix{retries}", code)
+            script_path.write_text(code, encoding="utf-8")
+            test_code = await loop.run_in_executor(None, generate_test_code, code)
+
         passed, test_log = await loop.run_in_executor(None, run_test, slug, test_code)
 
     if passed:

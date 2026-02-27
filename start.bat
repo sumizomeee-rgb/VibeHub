@@ -151,13 +151,24 @@ echo   Caddy Admin API ready (localhost:2019)
 echo.
 
 :: ============================================
-:: Start VibeHub
+:: Start VibeHub (with auto-restart support)
 :: ============================================
 echo [5/5] Starting VibeHub...
 echo.
 echo   LAN access:  http://localhost:9529/
 echo   Internal UI: http://127.0.0.1:8080/
 echo.
+
+:vibehub_loop
 "%VIBEHUB_ROOT%bin\uv.exe" run "%VIBEHUB_ROOT%main.py"
+set "EXIT_CODE=%errorlevel%"
+
+if "%EXIT_CODE%"=="42" (
+    echo.
+    echo  [VibeHub] Restart requested, restarting...
+    echo.
+    timeout /t 2 /nobreak >nul
+    goto vibehub_loop
+)
 
 pause

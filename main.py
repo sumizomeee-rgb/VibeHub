@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import sys
+from datetime import datetime
 from pathlib import Path
 from contextlib import asynccontextmanager
 
@@ -13,7 +14,15 @@ from hub_core.api_adapter import router as api_router, build_ws_endpoint
 
 # ---- Logging ----
 log_format = "%(asctime)s [%(levelname)s] %(name)s - %(message)s"
-file_handler = logging.FileHandler(str(config.DATA_DIR / "logs" / "hub.log"), encoding="utf-8")
+
+_logs_dir = config.DATA_DIR / "logs"
+_logs_dir.mkdir(parents=True, exist_ok=True)
+
+# 每次启动生成独立日志文件，格式: hub_20260226_194145.log
+_startup_ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+_session_log = _logs_dir / f"hub_{_startup_ts}.log"
+
+file_handler = logging.FileHandler(str(_session_log), encoding="utf-8")
 file_handler.setFormatter(logging.Formatter(log_format))
 console_handler = logging.StreamHandler(sys.stdout)
 console_handler.setFormatter(logging.Formatter(log_format))
