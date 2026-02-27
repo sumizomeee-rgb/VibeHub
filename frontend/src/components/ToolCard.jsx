@@ -120,16 +120,18 @@ export default function ToolCard({ tool, index, onAction }) {
       {/* Actions */}
       <div className="flex items-center gap-1">
         {alive && (
-          <button
+          <a
             className="btn-ghost"
-            style={{ fontSize: 12, padding: "5px 10px" }}
+            style={{ fontSize: 12, padding: "5px 10px", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "4px" }}
+            href={`/tools/${tool.slug}/`}
+            target="_blank"
+            rel="noopener noreferrer"
             onClick={() => {
               onAction("click", tool.slug);
-              window.open(`/tools/${tool.slug}/`, "_blank");
             }}
           >
             <ExternalLink size={14} /> 打开
-          </button>
+          </a>
         )}
         <button
           className="btn-ghost"

@@ -99,17 +99,20 @@ export default function Header({ onRefresh }) {
 function AdminMenu() {
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState(null);
+  const [confirmConfig, setConfirmConfig] = useState(null);
   const ref = useRef(null);
 
   useEffect(() => {
     function handleClick(e) {
+      if (confirmConfig) return; // 有二次弹窗时不关闭菜单
       if (ref.current && !ref.current.contains(e.target)) setOpen(false);
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
+  }, [confirmConfig]);
 
-  async function handleRebuild() {
+  async function executeRebuild() {
+    setConfirmConfig(null);
     setStatus("rebuilding");
     try {
       await rebuildFrontend();
@@ -121,8 +124,16 @@ function AdminMenu() {
     }
   }
 
-  async function handleRestart() {
-    if (!confirm("确定重启后端？所有工具将短暂不可用。")) return;
+  function handleRebuild() {
+    setConfirmConfig({
+      title: "编译前端",
+      content: "确定要重新编译前端资源吗？这可能需要一小段时间。",
+      onConfirm: executeRebuild
+    });
+  }
+
+  async function executeRestart() {
+    setConfirmConfig(null);
     setStatus("restarting");
     try {
       await restartBackend();
@@ -131,6 +142,14 @@ function AdminMenu() {
       // 后端已退出，连接断开是正常的
       setStatus("restart-ok");
     }
+  }
+
+  function handleRestart() {
+    setConfirmConfig({
+      title: "重启后端",
+      content: "确定要重启后端服务器吗？所有工具将短暂不可用。",
+      onConfirm: executeRestart
+    });
   }
 
   const btnStyle = {
@@ -184,6 +203,54 @@ function AdminMenu() {
             <Power size={15} />
             {status === "restarting" ? "重启中..." : status === "restart-ok" ? "已发送重启" : "重启后端"}
           </button>
+        </div>
+      )}
+
+      {/* 自定义非原生弹窗 */}
+      {confirmConfig && (
+        <div
+          style={{
+            position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: "rgba(0,0,0,0.5)",
+            backdropFilter: "blur(4px)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            zIndex: 9999
+          }}
+          className="animate-fade-in"
+          onClick={(e) => e.stopPropagation()} // 防止点击穿透触发关闭
+        >
+          <div
+            className="card animate-fade-in-scale flex flex-col gap-4"
+            style={{
+              width: 360, maxWidth: "90vw", padding: 24,
+              background: "var(--vh-surface)",
+              border: "1px solid var(--vh-border)",
+              boxShadow: "0 24px 48px rgba(0,0,0,0.2)"
+            }}
+          >
+            <div style={{ fontSize: 18, fontWeight: 600, color: "var(--vh-text)" }}>
+              {confirmConfig.title}
+            </div>
+            <div style={{ fontSize: 14, color: "var(--vh-text-secondary)", lineHeight: 1.5 }}>
+              {confirmConfig.content}
+            </div>
+            <div className="flex justify-end gap-3 mt-2">
+              <button
+                className="btn-ghost"
+                style={{ padding: "8px 16px" }}
+                onClick={() => setConfirmConfig(null)}
+              >
+                取消
+              </button>
+              <button
+                className="btn-primary"
+                style={{ padding: "8px 16px" }}
+                onClick={confirmConfig.onConfirm}
+              >
+                确定
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
