@@ -48,6 +48,13 @@ There is no test suite or linter configured for the hub itself. Testing only exi
 ## Key Conventions
 
 - **Generated tools are single-file Python scripts** in `projects/{slug}/main.py` using PEP 723 inline dependency metadata, FastAPI + Uvicorn, binding to `127.0.0.1` on the port from `PORT` env var, with relative URLs for reverse proxy compatibility.
+- **UI Design:** All generated tools MUST follow the VibeHub unified UI style specified in `UI_DESIGN_SPEC.md`. Key requirements:
+  - Colors: Primary `#cba186`, Background `#f0f2f5`, White cards with `border-radius: 16px`
+  - Layout: Header (title + actions) + Upload card + Button row + Grid preview
+  - Buttons: `.btn-primary` (main), `.btn-secondary` (secondary), `.btn-dl` (download), rounded 10px
+  - Drag zone: Dashed `#cba186` border, hover to black
+  - Responsive: Desktop 3 columns, Tablet 2 columns, Mobile 1 column
+  - Chinese text throughout
 - **All Claude CLI calls use stdin piping** for prompt delivery to avoid Windows CMD quoting issues.
 - **Async throughout** — httpx for HTTP, asyncio for coordination.
 - **Process management uses psutil** for process-tree-level cleanup (killing child processes recursively).

@@ -68,7 +68,18 @@ the reverse proxy.
    If the user requests complex features, implement the CORE functionality only
    and keep the UI simple and clean.
 
-9. Output ONLY the Python code inside a ```python code block. Nothing else.
+9. UI Design — All tools MUST follow VibeHub unified style:
+   - Colors: Primary #cba186 (brown), Background #f0f2f5 (light gray), White cards
+   - Card style: border-radius: 16px, box-shadow: 0 2px 12px rgba(0,0,0,.08)
+   - Buttons: .btn-primary (#cba186), .btn-secondary (#eee), .btn-dl (#000), rounded 10px
+   - Layout: Header (title + actions) + Upload card + Button row + Grid preview
+   - Drag zone: Dashed #cba186 border, hover to black
+   - Transparent preview: Checkerboard pattern (linear-gradient)
+   - Responsive: Desktop 3 columns, Tablet 2 columns, Mobile 1 column
+   - Chinese text for all UI elements
+   - Compact inline CSS: Use minified style strings, avoid verbose class names
+
+10. Output ONLY the Python code inside a ```python code block. Nothing else.
 """
 
 TEST_GEN_RULES = """\
@@ -96,12 +107,14 @@ Output ONLY the test code inside a ```python code block. Nothing else.
 """
 
 
-def _call_claude(user_prompt: str, system_prompt: str, timeout: int = 120) -> str:
+def _call_claude(user_prompt: str, system_prompt: str, timeout: int = 120, _max_retries: int = 2) -> str:
     """Call Claude CLI, always piping user_prompt via stdin.
 
     system_prompt goes to --system-prompt (must be short, no double-quotes).
     user_prompt (which may contain rules + code with double-quotes) is piped
     via stdin to bypass Windows CMD argument length and quoting limits.
+
+    Windows 上 Node.js libuv 管道偶发丢失 stdout，rc=0 但输出为空时自动重试。
     """
     flat_system = " ".join(system_prompt.replace("\r", "").split())
 
@@ -113,38 +126,44 @@ def _call_claude(user_prompt: str, system_prompt: str, timeout: int = 120) -> st
         "--output-format", "text",
     ]
 
-    log.info(f"Calling Claude CLI (timeout={timeout}s, prompt_len={len(user_prompt)})")
+    last_error = None
+    for attempt in range(1, _max_retries + 1):
+        log.info(f"Calling Claude CLI (timeout={timeout}s, prompt_len={len(user_prompt)}, attempt={attempt})")
 
-    result = subprocess.run(
-        cmd,
-        input=user_prompt,
-        capture_output=True,
-        text=True,
-        timeout=timeout,
-        encoding="utf-8",
-    )
+        result = subprocess.run(
+            cmd,
+            input=user_prompt,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            encoding="utf-8",
+        )
 
-    # Guard against None — Windows .CMD subprocess edge case
-    stdout = result.stdout or ""
-    stderr = result.stderr or ""
+        # Guard against None — Windows .CMD subprocess edge case
+        stdout = result.stdout or ""
+        stderr = result.stderr or ""
 
-    log.info(f"Claude CLI rc={result.returncode} stdout_len={len(stdout)} stderr_len={len(stderr)}")
+        log.info(f"Claude CLI rc={result.returncode} stdout_len={len(stdout)} stderr_len={len(stderr)}")
 
-    # Claude CLI 可能在 Node.js 清理阶段触发 libuv 断言失败，
-    # 导致 rc 非零，但 stdout 中已包含完整的有效输出。
-    # 优先检查 stdout 是否有内容，有则忽略退出码。
-    if result.returncode != 0:
+        # Claude CLI 可能在 Node.js 清理阶段触发 libuv 断言失败，
+        # 导致 rc 非零，但 stdout 中已包含完整的有效输出。
+        # 优先检查 stdout 是否有内容，有则忽略退出码。
+        if result.returncode != 0:
+            if stdout.strip():
+                log.warning(f"Claude CLI rc={result.returncode} 但 stdout 有内容 ({len(stdout)} chars)，忽略退出码。stderr: {stderr[:200]}")
+            else:
+                log.error(f"Claude CLI error: {stderr[:500]}")
+                raise RuntimeError(f"Claude CLI error (code={result.returncode}): {stderr[:500]}")
+
         if stdout.strip():
-            log.warning(f"Claude CLI rc={result.returncode} 但 stdout 有内容 ({len(stdout)} chars)，忽略退出码。stderr: {stderr[:200]}")
-        else:
-            log.error(f"Claude CLI error: {stderr[:500]}")
-            raise RuntimeError(f"Claude CLI error (code={result.returncode}): {stderr[:500]}")
+            return stdout
 
-    if not stdout.strip():
-        log.error("Claude CLI returned empty output")
-        raise RuntimeError("Claude CLI returned empty output")
+        # rc=0 但 stdout 为空 — Windows libuv 管道丢失，可重试
+        log.warning(f"Claude CLI returned empty output (attempt {attempt}/{_max_retries}), stdout_len={len(stdout)}")
+        last_error = "Claude CLI returned empty output"
 
-    return stdout
+    log.error(f"Claude CLI returned empty output after {_max_retries} attempts")
+    raise RuntimeError(last_error)
 
 
 def _extract_python_code(text: str) -> str:
@@ -189,7 +208,8 @@ def _dynamic_timeout(prompt_len: int, base: int = 120) -> int:
 _CONCISE_HINT = (
     "\n\nIMPORTANT: Your previous attempt was too long and got truncated. "
     "You MUST keep the code under 250 lines. Use minimal HTML/CSS. "
-    "No decorative styling — only functional UI elements."
+    "No decorative styling — only functional UI elements. "
+    "Follow VibeHub UI style: Primary #cba186, bg #f0f2f5, white rounded cards."
 )
 
 
