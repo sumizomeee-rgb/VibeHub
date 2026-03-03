@@ -102,6 +102,7 @@ async def start_tool(slug: str):
         if ready:
             await caddy_gateway.add_route(slug, port)
             registry.set_status(slug, "active")
+            registry.set_auto_start(slug, True)
             return {"ok": True}
         else:
             registry.set_status(slug, "error")
@@ -115,6 +116,7 @@ async def stop_tool(slug: str):
     process_manager.stop_tool(slug)
     await caddy_gateway.remove_route(slug)
     registry.set_status(slug, "stopped")
+    registry.set_auto_start(slug, False)
     return {"ok": True}
 
 
@@ -131,6 +133,7 @@ async def restart_tool(slug: str):
         if ready:
             await caddy_gateway.add_route(slug, port)
             registry.set_status(slug, "active")
+            registry.set_auto_start(slug, True)
             return {"ok": True}
         else:
             registry.set_status(slug, "error")

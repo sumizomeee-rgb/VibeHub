@@ -33,6 +33,7 @@ def register_tool(slug: str, display_name: str, script_path: str):
         "route_slug": slug,
         "created_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "click_count": data.get(slug, {}).get("click_count", 0),
+        "auto_start": True,
     }
     save(data)
     log.info(f"[{slug}] Registered: {display_name}")
@@ -88,3 +89,12 @@ def increment_click(slug: str):
     if slug in data:
         data[slug]["click_count"] = data[slug].get("click_count", 0) + 1
         save(data)
+
+
+def set_auto_start(slug: str, value: bool):
+    """设置工具是否自动启动"""
+    data = load()
+    if slug in data:
+        data[slug]["auto_start"] = value
+        save(data)
+        log.info(f"[{slug}] auto_start → {value}")

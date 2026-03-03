@@ -35,15 +35,15 @@ log = root_logger
 
 
 async def resurrect_all_tools():
-    """启动恢复：拉起所有 registry 中 active 或 error 的工具"""
+    """启动恢复：拉起所有 auto_start=True 的工具"""
     tools = registry.list_tools()
-    recoverable = [t for t in tools if t.get("status") in ("active", "error")]
+    recoverable = [t for t in tools if t.get("auto_start", False)]
 
     if not recoverable:
-        log.info("没有需要恢复的工具")
+        log.info("没有需要自动启动的工具")
         return
 
-    log.info(f"开始恢复 {len(recoverable)} 个工具...")
+    log.info(f"开始自动启动 {len(recoverable)} 个工具...")
 
     for tool in recoverable:
         slug = tool["slug"]
@@ -53,13 +53,16 @@ async def resurrect_all_tools():
 
             if ready:
                 await caddy_gateway.add_route(slug, port)
-                log.info(f"[{slug}] 恢复成功 → localhost:{port}")
+                registry.set_status(slug, "active")
+                log.info(f"[{slug}] 自动启动成功 → localhost:{port}")
             else:
                 registry.set_status(slug, "error")
                 log.warning(f"[{slug}] 启动后未就绪，标记为 error")
         except Exception as e:
             registry.set_status(slug, "error")
-            log.error(f"[{slug}] 恢复失败: {e}")
+            log.error(f"[{slug}] 自动启动失败: {e}")
+
+        await asyncio.sleep(0.5)  # 间隔启动避免端口冲突
 
 
 @asynccontextmanager

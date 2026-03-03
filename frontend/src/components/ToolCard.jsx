@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ExternalLink, Edit3, RotateCw, Trash2, Check, X, Globe, Clock } from "./Icons";
 
-export default function ToolCard({ tool, index, onAction, restarting }) {
+export default function ToolCard({ tool, index, onAction, restarting, stopping }) {
   const [renaming, setRenaming] = useState(false);
   const [newName, setNewName] = useState(tool.display_name || tool.slug);
   const [hovered, setHovered] = useState(false);
@@ -9,8 +9,10 @@ export default function ToolCard({ tool, index, onAction, restarting }) {
   const alive = tool.alive && tool.status === "active";
   const isError = tool.status === "error";
 
-  const statusText = restarting ? "重启中" : alive ? "运行中" : isError ? "异常" : "已停止";
-  const statusColor = restarting
+  const statusText = stopping ? "停止中" : restarting ? "重启中" : alive ? "运行中" : isError ? "异常" : "已停止";
+  const statusColor = stopping
+    ? "var(--vh-text-muted)"
+    : restarting
     ? "var(--vh-warning)"
     : alive
     ? "var(--vh-success)"
@@ -61,6 +63,32 @@ export default function ToolCard({ tool, index, onAction, restarting }) {
           />
           <span style={{ color: "var(--vh-text-secondary)", fontSize: 14, fontWeight: 500 }}>
             重启中...
+          </span>
+        </div>
+      )}
+
+      {/* 停止遮罩层 */}
+      {stopping && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: "rgba(255, 255, 255, 0.95)",
+            backdropFilter: "blur(4px)",
+            borderRadius: "var(--vh-radius)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "12px",
+            zIndex: 10,
+          }}
+        >
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="var(--vh-text-muted)">
+            <rect x="6" y="6" width="12" height="12" rx="2" />
+          </svg>
+          <span style={{ color: "var(--vh-text-secondary)", fontSize: 14, fontWeight: 500 }}>
+            停止中...
           </span>
         </div>
       )}
@@ -170,7 +198,7 @@ export default function ToolCard({ tool, index, onAction, restarting }) {
           className="btn-ghost"
           style={{ fontSize: 12, padding: "5px 10px" }}
           onClick={() => onAction("edit", tool.slug)}
-          disabled={restarting}
+          disabled={restarting || stopping}
         >
           <Edit3 size={14} /> 编辑
         </button>
@@ -184,16 +212,41 @@ export default function ToolCard({ tool, index, onAction, restarting }) {
               transition: "opacity 0.2s",
             }}
             onClick={() => setRenaming(true)}
-            disabled={restarting}
+            disabled={restarting || stopping}
           >
             重命名
+          </button>
+        )}
+        {alive ? (
+          <button
+            className="btn-ghost"
+            style={{ fontSize: 12, padding: "5px 10px", color: "var(--vh-text-muted)" }}
+            onClick={() => onAction("stop", tool.slug)}
+            disabled={restarting || stopping}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="6" y="6" width="12" height="12" rx="2" />
+            </svg>
+            停止
+          </button>
+        ) : (
+          <button
+            className="btn-ghost"
+            style={{ fontSize: 12, padding: "5px 10px", color: "var(--vh-success)" }}
+            onClick={() => onAction("start", tool.slug)}
+            disabled={restarting || stopping}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="5 3 19 12 5 21 5 3" />
+            </svg>
+            启动
           </button>
         )}
         <button
           className="btn-ghost"
           style={{ fontSize: 12, padding: "5px 10px", color: "var(--vh-warning)" }}
           onClick={() => onAction("restart", tool.slug)}
-          disabled={restarting}
+          disabled={restarting || stopping}
         >
           <RotateCw size={14} /> 重启
         </button>
@@ -207,7 +260,7 @@ export default function ToolCard({ tool, index, onAction, restarting }) {
             transition: "opacity 0.2s",
           }}
           onClick={() => onAction("delete", tool.slug)}
-          disabled={restarting}
+          disabled={restarting || stopping}
         >
           <Trash2 size={14} />
         </button>

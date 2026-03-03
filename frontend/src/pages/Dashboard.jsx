@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import ToolCard from "../components/ToolCard";
 import { Search, Sparkles, BarChart, Clock } from "../components/Icons";
-import { fetchTools, deleteTool, renameTool, restartTool, clickTool } from "../api/tools";
+import { fetchTools, deleteTool, renameTool, restartTool, clickTool, stopTool, startTool } from "../api/tools";
 
 const SORT_OPTIONS = [
   { label: "创建时间", value: "created_at", icon: Clock },
@@ -18,6 +18,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const [restartingSlug, setRestartingSlug] = useState(null);
+  const [stoppingSlug, setStoppingSlug] = useState(null);
   const navigate = useNavigate();
 
   const loadTools = useCallback(async () => {
@@ -66,6 +67,16 @@ export default function Dashboard() {
         await restartTool(slug);
         setRestartingSlug(null);
         setToast({ type: "success", message: "重启成功" });
+      } else if (action === "stop") {
+        setStoppingSlug(slug);
+        await stopTool(slug);
+        setStoppingSlug(null);
+        setToast({ type: "success", message: "已停止" });
+      } else if (action === "start") {
+        setRestartingSlug(slug);
+        await startTool(slug);
+        setRestartingSlug(null);
+        setToast({ type: "success", message: "启动成功" });
       } else if (action === "click") {
         await clickTool(slug);
       } else if (action === "edit") {
@@ -177,6 +188,7 @@ export default function Dashboard() {
                 index={i}
                 onAction={handleAction}
                 restarting={restartingSlug === tool.slug}
+                stopping={stoppingSlug === tool.slug}
               />
             ))}
           </div>
