@@ -32,7 +32,6 @@ export default function ToolCard({ tool, index, onAction, restarting, stopping }
     <div
       className="card p-5 flex flex-col gap-3.5 animate-fade-in-scale"
       style={{
-        gridColumn: alive ? "span 2" : "span 1",
         animationDelay: `${index * 50}ms`,
         position: "relative",
       }}
