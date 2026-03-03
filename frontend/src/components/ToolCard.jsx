@@ -175,7 +175,7 @@ export default function ToolCard({ tool, index, onAction, restarting, stopping }
       <div className="flex items-center gap-3 text-xs" style={{ color: "var(--vh-text-muted)" }}>
         <span className="flex items-center gap-1">
           <Globe size={12} />
-          <span style={{ fontFamily: "var(--vh-font-mono)", fontSize: 11 }}>/tools/{tool.slug}/</span>
+          <span style={{ fontFamily: "var(--vh-font-mono)", fontSize: 11 }}>{tool.slug}</span>
         </span>
         {tool.created_at && (
           <span className="flex items-center gap-1">
