@@ -129,12 +129,23 @@ export default function ToolCard({ tool, index, onAction, restarting, stopping }
               </button>
             </div>
           ) : (
-            <span
-              className="font-semibold truncate"
-              style={{ color: "var(--vh-text)", fontSize: 15, letterSpacing: "-0.02em" }}
-            >
-              {tool.display_name || tool.slug}
-            </span>
+            <div className="flex items-center gap-2">
+              <span
+                className="font-semibold truncate"
+                style={{ color: "var(--vh-text)", fontSize: 15, letterSpacing: "-0.02em" }}
+              >
+                {tool.display_name || tool.slug}
+              </span>
+              <button
+                className="btn-ghost"
+                style={{ padding: 4, opacity: hovered ? 1 : 0, transition: "opacity 0.2s" }}
+                onClick={() => setRenaming(true)}
+                disabled={restarting || stopping}
+                title="重命名"
+              >
+                <Edit3 size={14} style={{ color: "var(--vh-text-muted)" }} />
+              </button>
+            </div>
           )}
         </div>
 
@@ -190,70 +201,50 @@ export default function ToolCard({ tool, index, onAction, restarting, stopping }
             onClick={() => {
               onAction("click", tool.slug);
             }}
-            title="打开工具"
           >
-            <ExternalLink size={14} /> {alive && "打开"}
+            <ExternalLink size={14} /> 打开
           </a>
         )}
         <button
           className="btn-ghost"
-          style={{ fontSize: 12, padding: alive ? "5px 10px" : "5px 8px" }}
+          style={{ fontSize: 12, padding: "5px 10px" }}
           onClick={() => onAction("edit", tool.slug)}
           disabled={restarting || stopping}
-          title="编辑工具"
         >
-          <Edit3 size={14} /> {alive && "编辑"}
+          <Edit3 size={14} /> 编辑
         </button>
-        {!renaming && (
-          <button
-            className="btn-ghost"
-            style={{
-              fontSize: 12,
-              padding: alive ? "5px 10px" : "5px 8px",
-              opacity: hovered ? 1 : 0.5,
-              transition: "opacity 0.2s",
-            }}
-            onClick={() => setRenaming(true)}
-            disabled={restarting || stopping}
-            title="重命名"
-          >
-            {alive && "重命名"}
-          </button>
-        )}
         {alive ? (
           <button
             className="btn-ghost"
-            style={{ fontSize: 12, padding: alive ? "5px 10px" : "5px 8px", color: "var(--vh-text-muted)" }}
+            style={{ fontSize: 12, padding: "5px 10px", color: "var(--vh-text-muted)" }}
             onClick={() => onAction("stop", tool.slug)}
             disabled={restarting || stopping}
-            title="停止工具"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <rect x="6" y="6" width="12" height="12" rx="2" />
             </svg>
-            {alive && "停止"}
+            停止
           </button>
         ) : (
           <button
             className="btn-ghost"
-            style={{ fontSize: 12, padding: alive ? "5px 10px" : "5px 8px", color: "var(--vh-success)" }}
+            style={{ fontSize: 12, padding: "5px 10px", color: "var(--vh-success)" }}
             onClick={() => onAction("start", tool.slug)}
             disabled={restarting || stopping}
-            title="启动工具"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polygon points="5 3 19 12 5 21 5 3" />
             </svg>
+            启动
           </button>
         )}
         <button
           className="btn-ghost"
-          style={{ fontSize: 12, padding: alive ? "5px 10px" : "5px 8px", color: "var(--vh-warning)" }}
+          style={{ fontSize: 12, padding: "5px 10px", color: "var(--vh-warning)" }}
           onClick={() => onAction("restart", tool.slug)}
           disabled={restarting || stopping}
-          title="重启工具"
         >
-          <RotateCw size={14} /> {alive && "重启"}
+          <RotateCw size={14} /> 重启
         </button>
         <div className="flex-1" />
         <button
@@ -266,7 +257,6 @@ export default function ToolCard({ tool, index, onAction, restarting, stopping }
           }}
           onClick={() => onAction("delete", tool.slug)}
           disabled={restarting || stopping}
-          title="删除工具"
         >
           <Trash2 size={14} />
         </button>
