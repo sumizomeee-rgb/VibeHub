@@ -16,6 +16,7 @@ export default function Dashboard() {
   const [search, setSearch] = useState("");
   const [sortValue, setSortValue] = useState("created_at");
   const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState(null);
   const navigate = useNavigate();
 
   const loadTools = useCallback(async () => {
@@ -55,10 +56,14 @@ export default function Dashboard() {
     try {
       if (action === "delete") {
         await deleteTool(slug);
+        setToast({ type: "success", message: "删除成功" });
       } else if (action === "rename") {
         await renameTool(slug, extra);
+        setToast({ type: "success", message: "重命名成功" });
       } else if (action === "restart") {
+        setToast({ type: "info", message: "正在重启..." });
         await restartTool(slug);
+        setToast({ type: "success", message: "重启成功" });
       } else if (action === "click") {
         await clickTool(slug);
       } else if (action === "edit") {
@@ -68,12 +73,15 @@ export default function Dashboard() {
       await loadTools();
     } catch (e) {
       console.error(`操作失败 [${action}]:`, e);
+      setToast({ type: "error", message: `操作失败: ${e.message}` });
     }
   }
 
   return (
     <div className="min-h-screen" style={{ background: "var(--vh-bg)" }}>
       <Header onRefresh={loadTools} />
+
+      {toast && <Toast toast={toast} onClose={() => setToast(null)} />}
 
       <div className="max-w-6xl mx-auto px-6 pt-8 pb-4">
         {/* Stats + Search bar */}
@@ -239,6 +247,37 @@ function LoadingSkeleton() {
           />
         </div>
       ))}
+    </div>
+  );
+}
+
+function Toast({ toast, onClose }) {
+  const { type, message } = toast;
+  const bgColor = type === "success" ? "var(--vh-success)" : type === "error" ? "var(--vh-error)" : "var(--vh-primary)";
+
+  useState(() => {
+    const timer = setTimeout(onClose, 3000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  return (
+    <div
+      className="animate-fade-in"
+      style={{
+        position: "fixed",
+        top: 80,
+        right: 24,
+        zIndex: 9999,
+        background: bgColor,
+        color: "#fff",
+        padding: "12px 20px",
+        borderRadius: 10,
+        fontSize: 14,
+        fontWeight: 500,
+        boxShadow: "0 4px 16px rgba(0,0,0,0.15)",
+      }}
+    >
+      {message}
     </div>
   );
 }

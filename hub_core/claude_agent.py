@@ -87,21 +87,17 @@ Generate a lightweight test script for the given web tool.
 
 Requirements:
 1. Use httpx as HTTP client.
-2. Use subprocess to start the target app (main.py) with PORT env var.
-3. Cover: app starts on port, GET / returns 2xx, bad params don't crash.
-4. exit(0) on pass, exit(1) on fail with reason.
+2. Start target app with: subprocess.Popen(["uv", "run", "main.py"], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+   CRITICAL: Use DEVNULL for stdout/stderr to avoid pipe blocking. Use "uv run" not python.
+3. Wait 4 seconds for startup, then test: GET / returns 2xx.
+4. Print detailed error messages. exit(0) on pass, exit(1) on fail.
 5. PEP 723 header (TOML values MUST be double-quoted):
 # /// script
 # requires-python = ">=3.10"
 # dependencies = ["httpx"]
 # ///
-6. Timeout 15s max. Kill target process when done.
-7. CRITICAL formatting rule: Each Python statement MUST be on its own line.
-   NEVER put multiple statements on one line. For example:
-   WRONG: print("done")sys.exit(0)
-   RIGHT:
-       print("done")
-       sys.exit(0)
+6. Kill target process in finally block.
+7. Each Python statement MUST be on its own line.
 
 Output ONLY the test code inside a ```python code block. Nothing else.
 """
@@ -228,6 +224,7 @@ def generate_tool_code(user_prompt: str, existing_code: str | None = None) -> st
     timeout = _dynamic_timeout(len(base_prompt))
     log.info(f"Generating tool code for: {user_prompt[:80]}...")
 
+    syntax_err = None
     for attempt in range(3):
         # 截断重试时追加精简提示
         full_prompt = base_prompt
@@ -360,7 +357,9 @@ def run_test(slug: str, test_code: str) -> tuple[bool, str]:
         )
 
         passed = result.returncode == 0
-        output = (result.stdout + "\n" + result.stderr).strip()
+        stdout = result.stdout or ""
+        stderr = result.stderr or ""
+        output = (stdout + "\n" + stderr).strip()
         log.info(f"Test [{slug}] {'PASSED' if passed else 'FAILED'}: {output[:200]}")
         return passed, output
     except subprocess.TimeoutExpired:
