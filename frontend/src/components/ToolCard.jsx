@@ -186,6 +186,9 @@ export default function ToolCard({ tool, index, onAction, restarting, stopping }
         )}
       </div>
 
+      {/* 弹性占位，将按钮推到底部 */}
+      <div className="flex-1" />
+
       {/* Divider */}
       <div className="w-full h-px" style={{ background: "var(--vh-border)" }} />
 
