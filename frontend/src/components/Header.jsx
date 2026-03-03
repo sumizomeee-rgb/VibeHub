@@ -23,7 +23,12 @@ export default function Header({ onRefresh }) {
   const isDashboard = location.pathname === "/";
 
   return (
-    <header className="glass sticky top-0 z-50 border-b" style={{ borderColor: "var(--vh-border)" }}>
+    <header className="sticky top-0 z-50 transition-all duration-300" style={{ 
+        background: "var(--vh-glass-bg)", 
+        backdropFilter: "blur(32px) saturate(1.8)",
+        WebkitBackdropFilter: "blur(32px) saturate(1.8)",
+        boxShadow: "0 4px 30px rgba(0, 0, 0, 0.05)"
+      }}>
       <div className="max-w-6xl mx-auto flex items-center justify-between px-6 h-16">
         {/* Left: Logo */}
         <div className="flex items-center gap-4">

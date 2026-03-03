@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import ToolCard from "../components/ToolCard";
+import P5Background from "../components/P5Background";
 import { Search, Sparkles, BarChart, Clock } from "../components/Icons";
 import { fetchTools, deleteTool, renameTool, restartTool, clickTool, stopTool, startTool } from "../api/tools";
 
@@ -91,12 +92,13 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--vh-bg)" }}>
+    <div className="min-h-screen relative" style={{ background: "transparent" }}>
+      <P5Background />
       <Header onRefresh={loadTools} />
 
       {toast && <Toast toast={toast} onClose={() => setToast(null)} />}
 
-      <div className="max-w-6xl mx-auto px-6 pt-8 pb-4">
+      <div className="max-w-6xl mx-auto px-6 pt-8 pb-4 relative z-10">
         {/* Stats + Search bar */}
         <div className="flex items-center gap-4 mb-8">
           {/* Stats chips */}
@@ -156,13 +158,13 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-6 pb-12">
+      <div className="max-w-6xl mx-auto px-6 pb-12 relative z-10">
         {loading ? (
           <LoadingSkeleton />
         ) : filtered.length === 0 && !search ? (
           <EmptyState />
         ) : filtered.length === 0 && search ? (
-          <div className="text-center py-20 animate-fade-in">
+          <div className="text-center py-20 animate-fade-in relative z-10">
             <div className="mb-3" style={{ color: "var(--vh-text-muted)" }}>
               <Search size={40} />
             </div>

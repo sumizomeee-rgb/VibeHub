@@ -28,29 +28,31 @@
   --vh-error: #dc2626;
   --vh-info: #2563eb;
 
-  --vh-surface: #ffffff;
-  --vh-surface-hover: #fafafa;
-  --vh-surface-raised: #ffffff;
-  --vh-bg: #f8f9fb;
-  --vh-bg-secondary: #f1f3f5;
-  --vh-bg-tertiary: #e9ecef;
+  --vh-surface: rgba(255, 255, 255, 0.75);
+  --vh-surface-hover: rgba(255, 255, 255, 0.85);
+  --vh-surface-raised: rgba(255, 255, 255, 0.9);
+  
+  /* Rich gradient for the light theme background */
+  --vh-bg: background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+  --vh-bg-secondary: rgba(255, 255, 255, 0.6);
+  --vh-bg-tertiary: rgba(255, 255, 255, 0.4);
 
-  --vh-text: #111827;
-  --vh-text-secondary: #4b5563;
-  --vh-text-muted: #9ca3af;
+  --vh-text: #1a1a1a; /* Darker for light mode */
+  --vh-text-secondary: #374151; /* Darker */
+  --vh-text-muted: #4b5563; /* Darker */
 
-  --vh-border: rgba(0, 0, 0, 0.08);
-  --vh-border-strong: rgba(0, 0, 0, 0.12);
+  --vh-border: rgba(200, 200, 200, 0.5);
+  --vh-border-strong: rgba(180, 180, 180, 0.7);
 
   --vh-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --vh-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --vh-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
-  --vh-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+  --vh-shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --vh-shadow-md: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --vh-shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.16);
   --vh-shadow-glow: 0 0 0 3px rgba(79, 70, 229, 0.12);
-  --vh-shadow-card-hover: 0 8px 32px rgba(79, 70, 229, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+  --vh-shadow-card-hover: 0 12px 40px rgba(79, 70, 229, 0.2), 0 2px 8px rgba(0, 0, 0, 0.08);
 
-  --vh-glass-bg: rgba(255, 255, 255, 0.72);
-  --vh-glass-border: rgba(255, 255, 255, 0.5);
+  --vh-glass-bg: rgba(255, 255, 255, 0.5);
+  --vh-glass-border: rgba(255, 255, 255, 0.8);
 }
 
 /* ── Dark Theme ── */
@@ -66,29 +68,31 @@
   --vh-error: #f87171;
   --vh-info: #60a5fa;
 
-  --vh-surface: rgba(30, 30, 36, 0.8);
-  --vh-surface-hover: rgba(45, 45, 52, 0.8);
-  --vh-surface-raised: rgba(38, 38, 46, 0.9);
-  --vh-bg: #0c0c0f;
-  --vh-bg-secondary: #141418;
-  --vh-bg-tertiary: #1c1c22;
+  --vh-surface: rgba(24, 24, 32, 0.6);
+  --vh-surface-hover: rgba(36, 36, 48, 0.7);
+  --vh-surface-raised: rgba(48, 48, 64, 0.8);
+  
+  /* Deep void gradient for the dark theme */
+  --vh-bg: radial-gradient(circle at top right, #111524, #05070F, #020204);
+  --vh-bg-secondary: rgba(255, 255, 255, 0.12);
+  --vh-bg-tertiary: rgba(255, 255, 255, 0.08);
 
-  --vh-text: #f0f0f3;
-  --vh-text-secondary: #a0a0b0;
-  --vh-text-muted: #5c5c6e;
+  --vh-text: #ffffff; /* pure white text for readability against dark glass */
+  --vh-text-secondary: #e2e8f0; /* brighter */
+  --vh-text-muted: #cbd5e1; /* brighter */
 
-  --vh-border: rgba(255, 255, 255, 0.06);
-  --vh-border-strong: rgba(255, 255, 255, 0.1);
+  --vh-border: rgba(255, 255, 255, 0.15);
+  --vh-border-strong: rgba(255, 255, 255, 0.25);
 
-  --vh-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --vh-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
-  --vh-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
-  --vh-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
-  --vh-shadow-glow: 0 0 24px rgba(129, 140, 248, 0.15);
-  --vh-shadow-card-hover: 0 8px 32px rgba(129, 140, 248, 0.1), 0 0 0 1px rgba(129, 140, 248, 0.08);
+  --vh-shadow-xs: 0 2px 4px rgba(0, 0, 0, 0.3);
+  --vh-shadow-sm: 0 8px 16px rgba(0, 0, 0, 0.4);
+  --vh-shadow-md: 0 12px 24px rgba(0, 0, 0, 0.5);
+  --vh-shadow-lg: 0 16px 32px rgba(0, 0, 0, 0.6);
+  --vh-shadow-glow: 0 0 24px rgba(129, 140, 248, 0.35);
+  --vh-shadow-card-hover: 0 12px 40px rgba(129, 140, 248, 0.25), 0 0 0 1px rgba(129, 140, 248, 0.15);
 
-  --vh-glass-bg: rgba(20, 20, 26, 0.75);
-  --vh-glass-border: rgba(255, 255, 255, 0.06);
+  --vh-glass-bg: rgba(10, 10, 15, 0.4);
+  --vh-glass-border: rgba(255, 255, 255, 0.15);
 }
 
 /* ── Base ── */
@@ -102,6 +106,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   letter-spacing: -0.011em;
   margin: 0;
+  min-height: 100vh;
 }
 
 /* ── Scrollbar ── */
@@ -163,15 +168,18 @@ body {
 
 .card {
   background: var(--vh-surface);
-  border: 1px solid var(--vh-border);
+  backdrop-filter: blur(24px) saturate(1.5);
+  -webkit-backdrop-filter: blur(24px) saturate(1.5);
+  border: 1px solid var(--vh-glass-border);
   border-radius: var(--vh-radius);
   box-shadow: var(--vh-shadow-sm);
-  transition: box-shadow 0.3s ease, border-color 0.3s ease, transform 0.3s var(--vh-transition);
+  transition: box-shadow 0.3s ease, border-color 0.3s ease, transform 0.3s var(--vh-transition), background 0.3s ease;
 }
 .card:hover {
+  background: var(--vh-surface-hover);
   box-shadow: var(--vh-shadow-card-hover);
   border-color: var(--vh-border-strong);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
 }
 
 .btn-primary {
@@ -252,13 +260,14 @@ body {
   border-radius: 12px;
   font-size: 14px;
   color: var(--vh-text);
-  background: var(--vh-bg-secondary);
-  border: 1px solid var(--vh-border);
+  background: var(--vh-surface-raised); /* Make inputs more opaque than the general card background */
+  border: 1px solid var(--vh-border-strong);
   outline: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
   font-family: var(--vh-font-sans);
 }
 .input-field:focus {
+  background: var(--vh-surface);
   border-color: var(--vh-primary);
   box-shadow: var(--vh-shadow-glow);
 }
