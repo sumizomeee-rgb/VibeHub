@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ExternalLink, Edit3, RotateCw, Trash2, Check, X, Globe, Clock } from "./Icons";
 
-export default function ToolCard({ tool, index, onAction }) {
+export default function ToolCard({ tool, index, onAction, restarting }) {
   const [renaming, setRenaming] = useState(false);
   const [newName, setNewName] = useState(tool.display_name || tool.slug);
   const [hovered, setHovered] = useState(false);
@@ -9,8 +9,10 @@ export default function ToolCard({ tool, index, onAction }) {
   const alive = tool.alive && tool.status === "active";
   const isError = tool.status === "error";
 
-  const statusText = alive ? "运行中" : isError ? "异常" : "已停止";
-  const statusColor = alive
+  const statusText = restarting ? "重启中" : alive ? "运行中" : isError ? "异常" : "已停止";
+  const statusColor = restarting
+    ? "var(--vh-warning)"
+    : alive
     ? "var(--vh-success)"
     : isError
     ? "var(--vh-error)"
@@ -28,10 +30,41 @@ export default function ToolCard({ tool, index, onAction }) {
       style={{
         gridColumn: alive ? "span 2" : "span 1",
         animationDelay: `${index * 50}ms`,
+        position: "relative",
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
+      {/* 重启遮罩层 */}
+      {restarting && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: "rgba(255, 255, 255, 0.95)",
+            backdropFilter: "blur(4px)",
+            borderRadius: "var(--vh-radius)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "12px",
+            zIndex: 10,
+          }}
+        >
+          <RotateCw
+            size={28}
+            style={{
+              color: "var(--vh-warning)",
+              animation: "spin 1s linear infinite",
+            }}
+          />
+          <span style={{ color: "var(--vh-text-secondary)", fontSize: 14, fontWeight: 500 }}>
+            重启中...
+          </span>
+        </div>
+      )}
+
       {/* Header row */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3 min-w-0">
@@ -137,6 +170,7 @@ export default function ToolCard({ tool, index, onAction }) {
           className="btn-ghost"
           style={{ fontSize: 12, padding: "5px 10px" }}
           onClick={() => onAction("edit", tool.slug)}
+          disabled={restarting}
         >
           <Edit3 size={14} /> 编辑
         </button>
@@ -150,6 +184,7 @@ export default function ToolCard({ tool, index, onAction }) {
               transition: "opacity 0.2s",
             }}
             onClick={() => setRenaming(true)}
+            disabled={restarting}
           >
             重命名
           </button>
@@ -158,6 +193,7 @@ export default function ToolCard({ tool, index, onAction }) {
           className="btn-ghost"
           style={{ fontSize: 12, padding: "5px 10px", color: "var(--vh-warning)" }}
           onClick={() => onAction("restart", tool.slug)}
+          disabled={restarting}
         >
           <RotateCw size={14} /> 重启
         </button>
@@ -171,6 +207,7 @@ export default function ToolCard({ tool, index, onAction }) {
             transition: "opacity 0.2s",
           }}
           onClick={() => onAction("delete", tool.slug)}
+          disabled={restarting}
         >
           <Trash2 size={14} />
         </button>

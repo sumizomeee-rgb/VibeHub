@@ -17,6 +17,7 @@ export default function Dashboard() {
   const [sortValue, setSortValue] = useState("created_at");
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
+  const [restartingSlug, setRestartingSlug] = useState(null);
   const navigate = useNavigate();
 
   const loadTools = useCallback(async () => {
@@ -61,8 +62,9 @@ export default function Dashboard() {
         await renameTool(slug, extra);
         setToast({ type: "success", message: "重命名成功" });
       } else if (action === "restart") {
-        setToast({ type: "info", message: "正在重启..." });
+        setRestartingSlug(slug);
         await restartTool(slug);
+        setRestartingSlug(null);
         setToast({ type: "success", message: "重启成功" });
       } else if (action === "click") {
         await clickTool(slug);
@@ -169,7 +171,13 @@ export default function Dashboard() {
             }}
           >
             {filtered.map((tool, i) => (
-              <ToolCard key={tool.slug} tool={tool} index={i} onAction={handleAction} />
+              <ToolCard
+                key={tool.slug}
+                tool={tool}
+                index={i}
+                onAction={handleAction}
+                restarting={restartingSlug === tool.slug}
+              />
             ))}
           </div>
         )}
