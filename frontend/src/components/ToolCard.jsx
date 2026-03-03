@@ -9,6 +9,8 @@ export default function ToolCard({ tool, index, onAction, restarting, stopping }
   const alive = tool.alive && tool.status === "active";
   const isError = tool.status === "error";
 
+  const formatDate = (dateStr) => dateStr ? dateStr.slice(5) : "";
+
   const statusText = stopping ? "停止中" : restarting ? "重启中" : alive ? "运行中" : isError ? "异常" : "已停止";
   const statusColor = stopping
     ? "var(--vh-text-muted)"
@@ -178,7 +180,7 @@ export default function ToolCard({ tool, index, onAction, restarting, stopping }
         {tool.created_at && (
           <span className="flex items-center gap-1">
             <Clock size={12} />
-            {tool.created_at}
+            {formatDate(tool.created_at)}
           </span>
         )}
         {(tool.click_count || 0) > 0 && (
