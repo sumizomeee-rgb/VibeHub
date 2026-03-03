@@ -25,4 +25,5 @@ if "CLAUDE_CODE_GIT_BASH_PATH" not in os.environ:
 # shutil.which resolves .cmd/.bat on Windows
 CLAUDE_CMD = shutil.which("claude") or "claude"
 MAX_HEAL_RETRIES = 3
+AGENT_TIMEOUT = 300  # Agent 模式超时（秒），需完成 创建+测试+修复 的完整循环
 RESTART_EXIT_CODE = 42

@@ -1,308 +1,288 @@
+"""
+VibeHub Claude Agent — Agent 模式任务执行器
+
+让 Claude CLI 以 Agent 模式自主完成 文件创建、测试执行、错误修复 的完整闭环。
+不再使用 --output-format text（纯文本模式），不再用正则提取代码。
+Python 层仅负责：投放任务 → 实时透传日志 → 验证最终产物。
+"""
+
+import asyncio
 import logging
 import subprocess
 import re
 import os
 
-from hub_core.config import CLAUDE_CMD, UV_EXE, PROJECTS_DIR, MAX_HEAL_RETRIES
-from hub_core.port_manager import find_free_port
+from hub_core.config import CLAUDE_CMD, UV_EXE, PROJECTS_DIR, AGENT_TIMEOUT
 
 log = logging.getLogger("vibehub.agent")
 
+
 # ============================================================
-# Prompts
+# Mission Prompt 构建
 # ============================================================
-# ARCHITECTURE NOTE:
-# --system-prompt is a CLI argument → must NEVER contain " (double-quote)
-# characters because Windows cmd.exe mangles them when invoking .CMD wrappers.
-# Detailed rules (with code examples that need double-quotes) go into
-# _RULES_PREAMBLE, which is prepended to the user prompt and delivered
-# via stdin piping (bypasses CMD argument parsing entirely).
 
-# Short, quote-free role descriptions for --system-prompt
-CODEGEN_SYSTEM_ROLE = (
-    "You are a code generation engine. "
-    "Output ONLY a single Python code block. No explanations."
-)
+def _build_mission_prompt(
+    user_request: str,
+    existing_code: str | None = None,
+    slug: str = "",
+) -> str:
+    """构造 Agent Mission Prompt。
 
-TEST_GEN_SYSTEM_ROLE = (
-    "You are a test engineer. "
-    "Output ONLY a single Python code block. No explanations."
-)
-
-# Detailed rules prepended to user prompt (piped via stdin, so " is safe)
-CODEGEN_RULES = """\
-You must output a complete, standalone, single-file Python script.
-
-Mandatory rules (violating ANY is an error):
-
-1. PEP 723 inline metadata — the VERY FIRST lines must be:
-# /// script
-# requires-python = ">=3.10"
-# dependencies = ["fastapi", "uvicorn"]
-# ///
-Replace the dependencies list with ALL third-party packages your code imports.
-All TOML values MUST be double-quoted strings.
-
-2. Dynamic port: use int(os.environ.get("PORT", 8000)). NEVER hardcode.
-
-3. Bind address: 127.0.0.1 only. NEVER 0.0.0.0.
-
-4. Prefer FastAPI + Uvicorn. For frontend tools use HTMLResponse to inline HTML/CSS/JS.
-
-5. Entry point — file must end with:
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=int(os.environ.get("PORT", 8000)))
-
-6. Everything in ONE .py file. No extra files.
-
-7. CRITICAL — URL paths in HTML/JS: This app will be served behind a reverse proxy
-at a sub-path like /tools/my_app/. All fetch/XHR/form URLs in your HTML and
-JavaScript MUST be relative (NO leading slash). Use "api/upload" not "/api/upload".
-Use "./api/upload" or "api/upload". This ensures requests route correctly through
-the reverse proxy.
-
-8. CRITICAL — Keep code CONCISE. The entire script must be under 300 lines.
-   For HTML/CSS/JS content, use MINIMAL styling. Avoid verbose CSS frameworks
-   or large inline HTML templates. Use compact, functional UI design.
-   If the user requests complex features, implement the CORE functionality only
-   and keep the UI simple and clean.
-
-9. UI Design — All tools MUST follow VibeHub unified style:
-   - Colors: Primary #cba186 (brown), Background #f0f2f5 (light gray), White cards
-   - Card style: border-radius: 16px, box-shadow: 0 2px 12px rgba(0,0,0,.08)
-   - Buttons: .btn-primary (#cba186), .btn-secondary (#eee), .btn-dl (#000), rounded 10px
-   - Layout: Header (title + actions) + Upload card + Button row + Grid preview
-   - Drag zone: Dashed #cba186 border, hover to black
-   - Transparent preview: Checkerboard pattern (linear-gradient)
-   - Responsive: Desktop 3 columns, Tablet 2 columns, Mobile 1 column
-   - Chinese text for all UI elements
-   - Compact inline CSS: Use minified style strings, avoid verbose class names
-
-10. Output ONLY the Python code inside a ```python code block. Nothing else.
-"""
-
-TEST_GEN_RULES = """\
-Generate a lightweight test script for the given web tool.
-
-Requirements:
-1. Use httpx as HTTP client.
-2. Start target app with: subprocess.Popen(["uv", "run", "main.py"], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-   CRITICAL: Use DEVNULL for stdout/stderr to avoid pipe blocking. Use "uv run" not python.
-3. Wait 4 seconds for startup, then test: GET / returns 2xx.
-4. Print detailed error messages. exit(0) on pass, exit(1) on fail.
-5. PEP 723 header (TOML values MUST be double-quoted):
-# /// script
-# requires-python = ">=3.10"
-# dependencies = ["httpx"]
-# ///
-6. Kill target process in finally block.
-7. Each Python statement MUST be on its own line.
-
-Output ONLY the test code inside a ```python code block. Nothing else.
-"""
-
-
-def _call_claude(user_prompt: str, system_prompt: str, timeout: int = 120, _max_retries: int = 2) -> str:
-    """Call Claude CLI, always piping user_prompt via stdin.
-
-    system_prompt goes to --system-prompt (must be short, no double-quotes).
-    user_prompt (which may contain rules + code with double-quotes) is piped
-    via stdin to bypass Windows CMD argument length and quoting limits.
-
-    Windows 上 Node.js libuv 管道偶发丢失 stdout，rc=0 但输出为空时自动重试。
+    不再要求 Claude "输出代码文本"，
+    而是要求它 **使用自身的工具** 在当前工作目录创建/修改文件并自测。
     """
-    flat_system = " ".join(system_prompt.replace("\r", "").split())
+    uv_exe = str(UV_EXE).replace("\\", "/")
 
+    mission = f"""\
+你的任务是在当前工作目录下开发一个 Python Web 工具。
+
+## 用户需求
+{user_request}
+
+## 强制规则（违反任何一条即为失败）
+
+### 文件规范
+1. 将最终可运行的代码写入当前目录的 `main.py`，必须是单文件 FastAPI 应用。
+2. 文件开头必须包含 PEP 723 inline metadata：
+   ```
+   # /// script
+   # requires-python = ">=3.10"
+   # dependencies = ["fastapi", "uvicorn"]
+   # ///
+   ```
+   将 dependencies 替换为你实际使用的所有第三方库。
+
+### 运行规范
+3. 动态端口：使用 `int(os.environ.get("PORT", 8000))`，禁止硬编码。
+4. 绑定地址：仅 `127.0.0.1`，禁止 `0.0.0.0`。
+5. 入口点：文件末尾必须是：
+   ```python
+   if __name__ == "__main__":
+       import uvicorn
+       uvicorn.run(app, host="127.0.0.1", port=int(os.environ.get("PORT", 8000)))
+   ```
+
+### URL 规范
+6. 本应用将被反向代理挂载在子路径 `/tools/{slug}/` 下。
+   HTML/JS 中所有 fetch/XHR/form URL 必须是相对路径（无前导 `/`）。
+   使用 `api/upload` 而非 `/api/upload`。
+
+### UI 设计规范 (VibeHub 统一风格)
+7. 颜色：主色 #cba186，背景 #f0f2f5，白色卡片
+8. 卡片：border-radius: 16px, box-shadow: 0 2px 12px rgba(0,0,0,.08)
+9. 按钮：主按钮 #cba186，次按钮 #eee，下载按钮 #000，圆角 10px
+10. 布局：Header + 上传卡片 + 按钮行 + Grid 预览
+11. 响应式：桌面 3 列，平板 2 列，手机 1 列
+12. 所有 UI 文本使用中文
+
+### 自测流程
+13. 写完 `main.py` 后，你**必须**自己验证代码可运行：
+    - 使用 Bash 工具执行：`PORT=18999 {uv_exe} run main.py &`（后台启动）
+    - 等待 4 秒
+    - 用 curl 测试 `http://127.0.0.1:18999/` 是否返回 2xx
+    - 如果失败，阅读报错，修改 `main.py`，重新测试
+    - 测试完成后，务必 kill 掉后台进程
+    - 最多重试 3 次
+
+### 完成信号
+14. 当你确认 `main.py` 已可正常运行且测试通过，直接结束即可。
+    不需要输出任何额外解释。
+"""
+
+    if existing_code:
+        mission += f"""
+## 现有代码（在此基础上修改）
+
+```python
+{existing_code}
+```
+
+请在现有代码基础上，根据用户需求进行修改。保留已有的正确逻辑。
+"""
+
+    return mission
+
+
+# ============================================================
+# 工作目录准备
+# ============================================================
+
+_WORKSPACE_CLAUDE_MD_TEMPLATE = """\
+# CLAUDE.md
+
+## 工作环境
+- 当前目录是 VibeHub 的一个工具项目目录
+- 使用 `{uv_exe}` 代替 `python` 来运行脚本（它会自动解析 PEP 723 依赖）
+- 测试时使用 PORT 环境变量指定端口
+
+## 禁止事项
+- 不要创建除 main.py 之外的其他 Python 文件
+- 不要安装系统级依赖
+- 不要修改当前目录以外的任何文件
+"""
+
+
+def _prepare_workspace(
+    tool_dir: str,
+    user_request: str,
+    existing_code: str | None,
+    slug: str,
+):
+    """准备工作目录：写入 CLAUDE.md 和 _mission.md"""
+    uv_exe = str(UV_EXE).replace("\\", "/")
+
+    # 写入 CLAUDE.md 引导 Agent 行为边界
+    claude_md_path = os.path.join(tool_dir, "CLAUDE.md")
+    with open(claude_md_path, "w", encoding="utf-8") as f:
+        f.write(_WORKSPACE_CLAUDE_MD_TEMPLATE.format(uv_exe=uv_exe))
+
+    # 写入 _mission.md（避免 Windows CMD 参数长度限制 ~8191 字符）
+    mission = _build_mission_prompt(user_request, existing_code, slug)
+    mission_file = os.path.join(tool_dir, "_mission.md")
+    with open(mission_file, "w", encoding="utf-8") as f:
+        f.write(mission)
+
+    log.info(f"[{slug}] 工作目录已准备: {tool_dir}, mission_len={len(mission)}")
+
+
+# ============================================================
+# Agent Runner
+# ============================================================
+
+# Agent 入口指令（短文本，通过 -p 传递，避免 CMD 参数长度限制）
+_AGENT_ENTRY_INSTRUCTION = (
+    "请阅读当前目录下的 _mission.md 文件，严格按照其中的指示完成任务。"
+    "完成后不需要额外解释。"
+)
+
+
+async def run_agent_task(
+    slug: str,
+    user_request: str,
+    existing_code: str | None = None,
+    on_output: callable = None,
+    timeout: int | None = None,
+) -> bool:
+    """以 Agent 模式执行 Claude CLI 任务。
+
+    Args:
+        slug: 工具标识（决定工作目录 projects/{slug}/）
+        user_request: 用户原始需求描述
+        existing_code: 已有代码（编辑模式时传入）
+        on_output: 日志回调，每行输出时调用 on_output(line: str)
+        timeout: 超时秒数，默认 AGENT_TIMEOUT
+
+    Returns:
+        bool: 任务是否成功（main.py 存在且语法正确）
+    """
+    if timeout is None:
+        timeout = AGENT_TIMEOUT
+
+    tool_dir = str(PROJECTS_DIR / slug)
+    os.makedirs(tool_dir, exist_ok=True)
+
+    # 准备工作目录（写入 CLAUDE.md + _mission.md）
+    _prepare_workspace(tool_dir, user_request, existing_code, slug)
+
+    # Claude CLI 命令
+    # 关键变化：不再使用 --output-format text，释放 Agent 工具调用能力
     cmd = [
         CLAUDE_CMD,
         "--dangerously-skip-permissions",
-        "-p", "Follow the instructions provided via stdin.",
-        "--system-prompt", flat_system,
-        "--output-format", "text",
+        "-p", _AGENT_ENTRY_INSTRUCTION,
     ]
 
-    last_error = None
-    for attempt in range(1, _max_retries + 1):
-        log.info(f"Calling Claude CLI (timeout={timeout}s, prompt_len={len(user_prompt)}, attempt={attempt})")
+    log.info(f"[{slug}] 启动 Agent 任务 (timeout={timeout}s)")
 
-        result = subprocess.run(
-            cmd,
-            input=user_prompt,
-            capture_output=True,
-            text=True,
+    loop = asyncio.get_event_loop()
+    proc_ref = [None]  # 跨线程可变引用，用于超时时 kill
+
+    def _run_agent_sync() -> tuple[int, str]:
+        """在线程池中同步执行 Agent 进程，逐行读取输出并透传"""
+        output_lines = []
+        try:
+            proc = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                cwd=tool_dir,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            )
+            proc_ref[0] = proc
+
+            # 逐行读取 Agent 的实时输出（包括工具调用日志）
+            for raw_line in iter(proc.stdout.readline, ""):
+                line = _strip_ansi(raw_line.rstrip())
+                if line:
+                    output_lines.append(line)
+                    log.debug(f"[{slug}] Agent: {line[:200]}")
+                    if on_output:
+                        try:
+                            loop.call_soon_threadsafe(on_output, line)
+                        except RuntimeError:
+                            pass  # event loop 已关闭
+
+            proc.stdout.close()
+            rc = proc.wait(timeout=30)
+            return rc, "\n".join(output_lines)
+
+        except Exception as e:
+            log.error(f"[{slug}] Agent 进程异常: {e}")
+            return -1, f"Agent 进程异常: {e}"
+
+    # 在线程池中执行（避免阻塞事件循环，同时允许 WebSocket 推送日志）
+    try:
+        returncode, full_output = await asyncio.wait_for(
+            loop.run_in_executor(None, _run_agent_sync),
             timeout=timeout,
-            encoding="utf-8",
         )
+    except asyncio.TimeoutError:
+        proc = proc_ref[0]
+        if proc:
+            try:
+                proc.kill()
+            except Exception:
+                pass
+        log.error(f"[{slug}] Agent 超时 ({timeout}s)")
+        if on_output:
+            on_output(f"❌ Agent 执行超时 ({timeout}s)")
+        return False
 
-        # Guard against None — Windows .CMD subprocess edge case
-        stdout = result.stdout or ""
-        stderr = result.stderr or ""
+    log.info(f"[{slug}] Agent 退出 rc={returncode}, output_len={len(full_output)}")
 
-        log.info(f"Claude CLI rc={result.returncode} stdout_len={len(stdout)} stderr_len={len(stderr)}")
+    # 验证结果：main.py 是否存在且语法正确
+    main_py = PROJECTS_DIR / slug / "main.py"
+    if not main_py.exists():
+        log.error(f"[{slug}] Agent 完成但 main.py 不存在")
+        if on_output:
+            on_output("❌ Agent 完成但未创建 main.py")
+        return False
 
-        # Claude CLI 可能在 Node.js 清理阶段触发 libuv 断言失败，
-        # 导致 rc 非零，但 stdout 中已包含完整的有效输出。
-        # 优先检查 stdout 是否有内容，有则忽略退出码。
-        if result.returncode != 0:
-            if stdout.strip():
-                log.warning(f"Claude CLI rc={result.returncode} 但 stdout 有内容 ({len(stdout)} chars)，忽略退出码。stderr: {stderr[:200]}")
-            else:
-                log.error(f"Claude CLI error: {stderr[:500]}")
-                raise RuntimeError(f"Claude CLI error (code={result.returncode}): {stderr[:500]}")
-
-        if stdout.strip():
-            return stdout
-
-        # rc=0 但 stdout 为空 — Windows libuv 管道丢失，可重试
-        log.warning(f"Claude CLI returned empty output (attempt {attempt}/{_max_retries}), stdout_len={len(stdout)}")
-        last_error = "Claude CLI returned empty output"
-
-    log.error(f"Claude CLI returned empty output after {_max_retries} attempts")
-    raise RuntimeError(last_error)
-
-
-def _extract_python_code(text: str) -> str:
-    """Extract Python code block from Claude output.
-
-    Uses line-anchored closing ``` to avoid matching triple-quotes
-    inside Python code (e.g. r\"""...\""").
-    Also handles truncated output where closing ``` is missing.
-    """
-    # Match ```python ... ``` where closing ``` is at line start
-    match = re.search(r"```python\s*\n(.+?)^```", text, re.DOTALL | re.MULTILINE)
-    if match:
-        return match.group(1).strip()
-
-    # Fallback: any ``` ... ``` with line-anchored close
-    match = re.search(r"```\s*\n(.+?)^```", text, re.DOTALL | re.MULTILINE)
-    if match:
-        return match.group(1).strip()
-
-    # 处理截断情况：有开头的 ```python 但没有闭合 ```
-    match = re.search(r"```python\s*\n(.+)", text, re.DOTALL)
-    if match:
-        log.warning("Code block truncated (no closing ```), extracting available code")
-        return match.group(1).strip()
-
-    # Final fallback: strip obvious non-code lines
-    log.warning("No code block found in Claude output, using raw text as fallback")
-    lines = []
-    for line in text.splitlines():
-        stripped = line.strip()
-        if stripped and not stripped.startswith(("Note", "Here", "This", "I ", "I'", "Let me", "Sure")):
-            lines.append(line)
-    return "\n".join(lines).strip()
-
-
-def _dynamic_timeout(prompt_len: int, base: int = 120) -> int:
-    """根据 prompt 长度动态计算超时，每 5000 字符额外加 30s，上限 360s。"""
-    extra = max(0, (prompt_len - 5000)) // 5000 * 30
-    return min(base + extra, 360)
-
-
-_CONCISE_HINT = (
-    "\n\nIMPORTANT: Your previous attempt was too long and got truncated. "
-    "You MUST keep the code under 250 lines. Use minimal HTML/CSS. "
-    "No decorative styling — only functional UI elements. "
-    "Follow VibeHub UI style: Primary #cba186, bg #f0f2f5, white rounded cards."
-)
-
-
-def _is_truncation_error(syntax_err: str) -> bool:
-    """判断语法错误是否由输出截断导致（未闭合的字符串/括号）"""
-    truncation_hints = ("unterminated", "unexpected EOF", "expected an indented block")
-    return any(h in syntax_err.lower() for h in truncation_hints)
-
-
-def generate_tool_code(user_prompt: str, existing_code: str | None = None) -> str:
-    """Generate/modify tool code via Claude CLI. Validates syntax and retries up to 2 times."""
-    base_prompt = CODEGEN_RULES + "\n---\nUser request: " + user_prompt
-    if existing_code:
-        base_prompt += f"\n\n## Existing code (modify based on this):\n```python\n{existing_code}\n```"
-
-    timeout = _dynamic_timeout(len(base_prompt))
-    log.info(f"Generating tool code for: {user_prompt[:80]}...")
-
-    syntax_err = None
-    for attempt in range(3):
-        # 截断重试时追加精简提示
-        full_prompt = base_prompt
-        if attempt > 0 and syntax_err and _is_truncation_error(syntax_err):
-            full_prompt = base_prompt + _CONCISE_HINT
-            log.info(f"Attempt {attempt + 1}: adding conciseness hint (truncation detected)")
-
-        output = _call_claude(full_prompt, CODEGEN_SYSTEM_ROLE, timeout=timeout)
-        code = _extract_python_code(output)
-
-        syntax_err = _check_syntax(code)
-        if syntax_err is None:
-            log.info(f"Generated code: {len(code)} chars, syntax OK")
-            return code
-
-        log.warning(f"Generated tool code has syntax error (attempt {attempt + 1}): {syntax_err}")
-
-    # 3次都失败，仍然返回（让后续测试阶段捕获）
-    log.error(f"Tool code syntax error after 3 attempts: {syntax_err}")
-    return code
-
-
-def fix_tool_code(code: str, error_log: str) -> str:
-    """Send error log + code to Claude for fixing.
-
-    如果原始代码是因为截断导致的语法错误，直接用精简提示重新生成，
-    而不是把一大段坏代码发回去"修复"。
-    """
+    code = main_py.read_text(encoding="utf-8")
     syntax_err = _check_syntax(code)
+    if syntax_err:
+        log.error(f"[{slug}] main.py 语法错误: {syntax_err}")
+        if on_output:
+            on_output(f"❌ main.py 语法错误: {syntax_err}")
+        return False
 
-    # 截断导致的错误 → 重新生成比"修复"更有效
-    if syntax_err and _is_truncation_error(syntax_err):
-        log.info("Code appears truncated, regenerating with concise hint instead of fixing")
-        # 从错误日志中提取原始需求信息比较困难，
-        # 所以仍然发送代码但只取前 150 行作为参考
-        code_lines = code.splitlines()
-        truncated_ref = "\n".join(code_lines[:150])
-        full_prompt = CODEGEN_RULES + _CONCISE_HINT + "\n---\n"
-        full_prompt += f"""Rewrite this script. The previous version was too long and got truncated.
-Keep ALL the same functionality but use much more concise code (under 250 lines).
+    log.info(f"[{slug}] Agent 任务成功, main.py = {len(code)} chars")
+    return True
 
-### Reference (first 150 lines of previous attempt):
-```python
-{truncated_ref}
-```
 
-### Error:
-```
-{error_log[:300]}
-```"""
-    else:
-        # 正常修复流程，但限制代码长度避免 prompt 膨胀
-        code_to_send = code
-        if len(code) > 12000:
-            log.warning(f"Code too large ({len(code)} chars), truncating to 12000 for fix prompt")
-            code_to_send = code[:12000] + "\n# ... (truncated)"
+# ============================================================
+# 辅助函数
+# ============================================================
 
-        full_prompt = CODEGEN_RULES + "\n---\n"
-        full_prompt += f"""The following Python script has errors. Fix it and output the complete corrected code.
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*[a-zA-Z]")
 
-### Original code:
-```python
-{code_to_send}
-```
 
-### Error log:
-```
-{error_log[:500]}
-```
-
-Output the fixed complete code following all mandatory rules."""
-
-    timeout = _dynamic_timeout(len(full_prompt))
-    log.info(f"Fixing tool code (prompt_len={len(full_prompt)}), error: {error_log[:100]}...")
-    output = _call_claude(full_prompt, CODEGEN_SYSTEM_ROLE, timeout=timeout)
-    fixed = _extract_python_code(output)
-    log.info(f"Fixed code: {len(fixed)} chars")
-    return fixed
+def _strip_ansi(text: str) -> str:
+    """去除 ANSI 转义码（Claude CLI 输出包含彩色文本标记）"""
+    return _ANSI_RE.sub("", text)
 
 
 def _check_syntax(code: str) -> str | None:
@@ -312,58 +292,3 @@ def _check_syntax(code: str) -> str | None:
         return None
     except SyntaxError as e:
         return f"Line {e.lineno}: {e.msg}"
-
-
-def generate_test_code(tool_code: str) -> str:
-    """Generate test script for tool code. Validates syntax and retries up to 2 times."""
-    full_prompt = TEST_GEN_RULES + "\n---\n"
-    full_prompt += f"Generate a test script for this web tool:\n```python\n{tool_code}\n```"
-
-    for attempt in range(3):
-        log.info(f"Generating test code (attempt {attempt + 1})...")
-        output = _call_claude(full_prompt, TEST_GEN_SYSTEM_ROLE, timeout=60)
-        code = _extract_python_code(output)
-
-        syntax_err = _check_syntax(code)
-        if syntax_err is None:
-            log.info(f"Generated test code: {len(code)} chars, syntax OK")
-            return code
-
-        log.warning(f"Generated test code has syntax error: {syntax_err}, retrying...")
-
-    # 3次都有语法错误，返回最后一次的结果（让调用方处理）
-    log.error(f"Test code syntax error after 3 attempts: {syntax_err}")
-    return code
-
-
-def run_test(slug: str, test_code: str) -> tuple[bool, str]:
-    """Execute test script, return (passed, log)."""
-    test_dir = PROJECTS_DIR / slug
-    test_file = test_dir / "_test_main.py"
-
-    try:
-        test_file.write_text(test_code, encoding="utf-8")
-        port = find_free_port()
-        log.info(f"Running test for [{slug}] on port {port}")
-
-        result = subprocess.run(
-            [str(UV_EXE), "run", str(test_file)],
-            env={**os.environ, "PORT": str(port)},
-            capture_output=True,
-            text=True,
-            timeout=60,
-            encoding="utf-8",
-            cwd=str(test_dir),
-        )
-
-        passed = result.returncode == 0
-        stdout = result.stdout or ""
-        stderr = result.stderr or ""
-        output = (stdout + "\n" + stderr).strip()
-        log.info(f"Test [{slug}] {'PASSED' if passed else 'FAILED'}: {output[:200]}")
-        return passed, output
-    except subprocess.TimeoutExpired:
-        log.error(f"Test [{slug}] timed out (60s)")
-        return False, "Test timed out (60s)"
-    finally:
-        test_file.unlink(missing_ok=True)

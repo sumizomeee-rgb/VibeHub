@@ -11,7 +11,7 @@ from datetime import datetime
 from pathlib import Path
 
 from hub_core import config, registry, process_manager, caddy_gateway
-from hub_core.claude_agent import generate_tool_code, fix_tool_code, generate_test_code, run_test, _check_syntax
+from hub_core.claude_agent import run_agent_task
 from hub_core.guard_agent import guard_check
 
 log = logging.getLogger("vibehub.build")
@@ -145,61 +145,63 @@ async def _run_build(task: BuildTask):
 
 
 async def _run_build_locked(task, slug, display_name, prompt, existing_code, edit_slug):
-    """持有 slug 锁后的构建流程"""
-    loop = asyncio.get_event_loop()
+    """持有 slug 锁后的构建流程 (Agent 模式)
 
-    # Step 1: 生成代码
-    task.emit_step(1, "生成代码")
-    task.emit_log("🤖  正在调用 AI 生成代码...")
-    code = await loop.run_in_executor(None, generate_tool_code, prompt, existing_code or None)
-    task.emit_log(f"✅  代码生成完成 ({len(code)} 字符)")
-    _save_snapshot(slug, "gen", code)
+    Claude CLI 以 Agent 模式自主完成：代码生成 → 自测 → 修复 的完整闭环。
+    Python 层仅负责：投放任务 → 透传日志 → 验证产物 → 部署服务。
+    """
 
-    # Step 2: 单元测试
-    task.emit_step(2, "单元测试")
-    task.emit_log("🧪  正在生成测试脚本...")
-    test_code = await loop.run_in_executor(None, generate_test_code, code)
-    _save_snapshot(slug, "test", test_code)
-    task.emit_log("🧪  正在执行测试...")
+    # Step 1: Agent 自主构建（带重试机制）
+    task.emit_step(1, "AI 构建中")
 
-    tool_dir = config.PROJECTS_DIR / slug
-    tool_dir.mkdir(parents=True, exist_ok=True)
-    script_path = tool_dir / "main.py"
-    script_path.write_text(code, encoding="utf-8")
+    def on_agent_output(line: str):
+        """实时透传 Agent 日志到前端 WebSocket"""
+        if len(line) > 500:
+            line = line[:500] + "..."
+        task.emit_log(f"  🔧 {line}")
 
-    passed, test_log = await loop.run_in_executor(None, run_test, slug, test_code)
-
-    # 自愈循环
-    retries = 0
-    while not passed and retries < config.MAX_HEAL_RETRIES:
-        retries += 1
-
-        # 判断错误来源：测试脚本自身语法错误 vs 工具代码问题
-        is_test_script_error = "_test_main.py" in test_log and "SyntaxError" in test_log
-
-        if is_test_script_error:
-            task.emit_log(f"⚠️  测试脚本语法错误，重新生成测试 (第{retries}次)")
-            test_code = await loop.run_in_executor(None, generate_test_code, code)
+    success = False
+    for attempt in range(1, config.MAX_HEAL_RETRIES + 1):
+        if attempt == 1:
+            task.emit_log("🤖  Agent 正在自主构建工具...")
         else:
-            task.emit_log(f"⚠️  测试未通过 (第{retries}次修复中...)")
-            task.emit_log(f"    错误: {test_log[:200]}")
-            code = await loop.run_in_executor(None, fix_tool_code, code, test_log)
-            _save_snapshot(slug, f"fix{retries}", code)
-            script_path.write_text(code, encoding="utf-8")
-            test_code = await loop.run_in_executor(None, generate_test_code, code)
+            task.emit_log(f"🔄  重试构建 (第 {attempt}/{config.MAX_HEAL_RETRIES} 次)...")
 
-        passed, test_log = await loop.run_in_executor(None, run_test, slug, test_code)
+        success = await run_agent_task(
+            slug=slug,
+            user_request=prompt,
+            existing_code=existing_code or None,
+            on_output=on_agent_output,
+        )
 
-    if passed:
-        task.emit_log("✅  测试通过!")
-    else:
-        task.emit_log(f"⚠️  测试仍未通过（已重试{config.MAX_HEAL_RETRIES}次），继续部署...")
+        if success:
+            task.emit_log("✅  Agent 构建完成!")
+            break
 
-    # Step 3: 启动服务
-    task.emit_step(3, "启动服务")
+        if attempt < config.MAX_HEAL_RETRIES:
+            task.emit_log(f"⚠️  构建失败，准备重试...")
+            await asyncio.sleep(2)
+        else:
+            task.emit_log("❌  Agent 构建失败，已达最大重试次数")
+            task.emit_error("Agent 构建失败，main.py 不存在或语法错误")
+            return
+
+    # Step 2: 启动服务
+    task.emit_step(2, "启动服务")
     task.emit_log("🚀  正在启动工具...")
 
+    # 编辑模式：备份旧代码
+    backup_path = None
     if edit_slug:
+        script_path = config.PROJECTS_DIR / slug / "main.py"
+        backup_path = config.PROJECTS_DIR / slug / "main.py.backup"
+        try:
+            import shutil
+            shutil.copy(script_path, backup_path)
+            task.emit_log("💾  已备份当前版本")
+        except Exception as e:
+            log.warning(f"[{slug}] 备份失败: {e}")
+
         process_manager.stop_tool(edit_slug)
         await caddy_gateway.remove_route(edit_slug)
 
@@ -209,18 +211,40 @@ async def _run_build_locked(task, slug, display_name, prompt, existing_code, edi
     if not ready:
         err_log = process_manager.get_tool_log(slug, tail=20)
         task.emit_log(f"❌  工具启动失败:\n{err_log}")
-        if edit_slug:
-            registry.set_status(slug, "error")
-        task.emit_error("工具启动失败，请检查日志")
+
+        # 编辑模式：尝试回滚
+        if edit_slug and backup_path and backup_path.exists():
+            task.emit_log("🔄  正在回滚到旧版本...")
+            try:
+                import shutil
+                shutil.copy(backup_path, script_path)
+                process_manager.stop_tool(slug)
+                pid, port = process_manager.start_tool(slug)
+                ready = await process_manager.wait_for_tool_ready(slug, timeout=30.0)
+                if ready:
+                    await caddy_gateway.add_route(slug, port)
+                    registry.set_status(slug, "active")
+                    task.emit_error("新版本启动失败，已回滚到旧版本")
+                else:
+                    registry.set_status(slug, "error")
+                    task.emit_error("回滚失败，工具无法启动")
+            except Exception as e:
+                log.error(f"[{slug}] 回滚失败: {e}")
+                registry.set_status(slug, "error")
+                task.emit_error(f"回滚失败: {str(e)[:100]}")
+        else:
+            if edit_slug:
+                registry.set_status(slug, "error")
+            task.emit_error("工具启动失败，请检查日志")
         return
 
-    # Step 4: 注册路由
-    task.emit_step(4, "注册路由")
+    # Step 3: 注册路由
+    task.emit_step(3, "注册路由")
     task.emit_log("🔗  正在注册网关路由...")
     await caddy_gateway.add_route(slug, port)
 
-    # Step 5: 完成
-    task.emit_step(5, "完成")
+    # Step 4: 完成
+    task.emit_step(4, "完成")
     registry.register_tool(slug, display_name, str(config.PROJECTS_DIR / slug / "main.py"))
     task.emit_log("✅  部署完成!")
 
