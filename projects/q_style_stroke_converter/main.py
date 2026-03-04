@@ -7,11 +7,11 @@ import os
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 
-app = FastAPI(title="头像切图工具")
+app = FastAPI(title="Q版描边转换器")
 
 HTML = r"""<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>头像切图工具</title>
+<title>Q版描边转换器</title>
 <!-- JSZip CDN for batch zip export -->
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <style>
@@ -54,7 +54,7 @@ background-size:16px 16px;background-position:0 0,0 8px,8px -8px,-8px 0}
 
 HTML_BODY = """
 <div class="header">
-<h1>头像切图工具</h1>
+<h1>Q版描边转换器</h1>
 <div class="actions">
 <button class="btn btn-primary" id="batchExportBtn" disabled onclick="batchExport()">一键打包导出</button>
 <button class="btn btn-secondary" id="changeImageBtn" onclick="fi.click()">更换图片</button>
