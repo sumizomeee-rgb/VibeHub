@@ -29,25 +29,7 @@
     "path": "E:\\Such_Proj\\Other\\VibeHub\\projects\\avatar_crop_tool\\main.py",
     "route_slug": "avatar_crop_tool",
     "created_at": "2026-03-03 20:31",
-    "click_count": 8,
-    "auto_start": true
-  },
-  "sticker_style_generator_pro": {
-    "display_name": "高级贴纸风格生成器",
-    "status": "active",
-    "path": "E:\\Such_Proj\\Other\\VibeHub\\projects\\sticker_style_generator_pro\\main.py",
-    "route_slug": "sticker_style_generator_pro",
-    "created_at": "2026-03-03 22:50",
-    "click_count": 7,
-    "auto_start": true
-  },
-  "q_style_stroke_converter": {
-    "display_name": "Q版描边转换器",
-    "status": "active",
-    "path": "E:\\Such_Proj\\Other\\VibeHub\\projects\\q_style_stroke_converter\\main.py",
-    "route_slug": "q_style_stroke_converter",
-    "created_at": "2026-03-04 14:15",
-    "click_count": 1,
+    "click_count": 9,
     "auto_start": true
   }
 }

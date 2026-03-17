@@ -58,9 +58,11 @@ h1{font-size:22px;color:var(--text-main);display:flex;align-items:center;gap:8px
 .card-actions{position:absolute;top:8px;right:8px;display:flex;gap:6px;z-index:10}
 .action-btn{background:rgba(255,255,255,.9);color:#333;border:1px solid #ddd;width:28px;height:28px;border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);transition:all .2s}
 .action-btn:hover{background:var(--primary);color:#fff;border-color:var(--primary)}
-.info-row{display:flex;justify-content:space-between;font-size:12px;color:#555;background:#f8f9fa;padding:8px 12px;border-radius:6px;margin-bottom:6px}
-.info-row span.label{color:var(--text-light)}
-.info-row span.val{font-family:monospace;font-size:13px}
+.info-row{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#555;background:#f8f9fa;padding:8px 12px;border-radius:6px;margin-bottom:6px}
+.info-row span.label{color:var(--text-light);flex-shrink:0;}
+.info-row span.val{font-family:monospace;font-size:13px;word-break:break-all;text-align:right;}
+.name-input{border:1px solid transparent;background:transparent;font-family:monospace;font-size:13px;text-align:right;width:100%;color:var(--text-main);transition:all .2s;padding:2px 4px;border-radius:4px;outline:none;}
+.name-input:hover, .name-input:focus{border-color:var(--primary);background:#fff;box-shadow:0 0 0 2px rgba(203,161,134,.1);}
 
 .empty-state{grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text-light);background:#fafbfc;border-radius:12px;border:2px dashed var(--border)}
 .empty-state svg{margin-bottom:16px;opacity:0.5}
@@ -68,17 +70,18 @@ h1{font-size:22px;color:var(--text-main);display:flex;align-items:center;gap:8px
 .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:1000;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
 .modal.active{display:flex}
 .modal-content{background:var(--card-bg);border-radius:16px;padding:24px;width:95vw;max-width:1200px;height:90vh;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(0,0,0,.2)}
-.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-shrink:0}
+.modal-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;flex-shrink:0}
 .modal-title{font-size:18px;font-weight:600;display:flex;align-items:center;gap:8px}
-.modal-tips{font-size:13px;color:var(--primary);background:#fff3eb;padding:6px 12px;border-radius:6px}
-.modal-canvas-wrap{flex:1;position:relative;user-select:none;overflow:auto;border-radius:8px;background:repeating-conic-gradient(#f4f4f4 0 25%,#fff 0 50%) 0 0/16px 16px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;padding:100px}
-.modal-img-container{position:relative;box-shadow:0 0 20px rgba(0,0,0,.1)}
-.modal-img-container img{display:block;max-width:none;opacity:0.8}
+.modal-tips{font-size:13px;color:var(--primary);background:#fff3eb;padding:6px 12px;border-radius:6px;margin-top:8px;display:inline-block;}
+.modal-template-tools{display:flex;gap:12px;align-items:center;background:#fafbfc;padding:8px 16px;border-radius:8px;border:1px solid var(--border);}
+.modal-canvas-wrap{flex:1;position:relative;user-select:none;overflow:hidden;border-radius:8px;background:repeating-conic-gradient(#f4f4f4 0 25%,#fff 0 50%) 0 0/16px 16px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;padding:20px}
+.modal-img-container{position:relative;max-width:100%;max-height:100%;display:inline-block;box-shadow:0 0 20px rgba(0,0,0,.1)}
+.modal-img-container img{display:block;max-width:100%;max-height:100%;width:auto;height:auto;opacity:0.8}
 .modal-crop-box{position:absolute;outline:2px solid var(--primary);cursor:move;box-shadow:0 0 0 9999px rgba(0,0,0,.5)}
-.modal-grid{position:absolute;inset:0;pointer-events:none;border:1px solid rgba(255,255,255,.3)}
+.modal-grid{position:absolute;inset:0;pointer-events:none;border:1px solid rgba(255,255,255,.3);z-index:10;}
 .modal-grid::before{content:'';position:absolute;top:33.3%;bottom:33.3%;left:0;right:0;border-top:1px dashed rgba(255,255,255,.5);border-bottom:1px dashed rgba(255,255,255,.5)}
 .modal-grid::after{content:'';position:absolute;left:33.3%;right:33.3%;top:0;bottom:0;border-left:1px dashed rgba(255,255,255,.5);border-right:1px dashed rgba(255,255,255,.5)}
-.modal-resize{position:absolute;right:-7px;bottom:-7px;width:14px;height:14px;background:var(--primary);border:2px solid #fff;border-radius:50%;cursor:nwse-resize;box-shadow:0 2px 4px rgba(0,0,0,.2)}
+.modal-resize{position:absolute;right:-7px;bottom:-7px;width:14px;height:14px;background:var(--primary);border:2px solid #fff;border-radius:50%;cursor:nwse-resize;box-shadow:0 2px 4px rgba(0,0,0,.2);z-index:11;}
 .modal-btns{display:flex;gap:12px;justify-content:flex-end;margin-top:20px;flex-shrink:0}
 @media(max-width:768px){.grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:480px){.grid{grid-template-columns:1fr}}
@@ -128,13 +131,25 @@ h1{font-size:22px;color:var(--text-main);display:flex;align-items:center;gap:8px
 <div class="modal" id="modal">
 <div class="modal-content">
     <div class="modal-header">
-        <div class="modal-title" id="modalTitle">编辑区域</div>
-        <div class="modal-tips">✨ 提示：选框可以拖拽到图片外部，超出部分将自动补齐为透明底</div>
+        <div>
+            <div class="modal-title" id="modalTitle">编辑区域</div>
+            <div class="modal-tips">✨ 提示：选框可以拖拽到图片外部，超出部分将自动补齐为透明底</div>
+        </div>
+        <div class="modal-template-tools">
+            <span style="font-size:12px; color:var(--text-sub); font-weight:600;">外置模板比对</span>
+            <input type="range" id="templateOpacity" min="0" max="1" step="0.1" value="0.5" style="width:70px" title="调整模板透明度">
+            <label class="btn-outline" style="cursor:pointer; padding:4px 10px; margin:0;">
+                上传透明参考图
+                <input type="file" id="templateFileInput" accept="image/*" style="display:none">
+            </label>
+            <button class="btn-outline" id="clearTemplateBtn" style="display:none; padding:4px 10px; color:#ff4d4f; border-color:#ffb3b3; background:#fff1f0; margin:0;">清除</button>
+        </div>
     </div>
     <div class="modal-canvas-wrap" id="modalWrap">
         <div class="modal-img-container" id="modalImgContainer">
             <img id="modalImg" src="">
             <div class="modal-crop-box" id="modalCropBox">
+                <img id="modalTemplateImg" src="" style="display:none; position:absolute; inset:0; width:100%; height:100%; object-fit:fill; pointer-events:none; opacity:0.5; z-index:5;">
                 <div class="modal-grid"></div>
                 <div class="modal-resize" id="modalResize"></div>
             </div>
@@ -183,11 +198,10 @@ const rawData = [
 let items = [];
 let categories = [];
 let currentCategory = '';
-
-// V3 核心存储：按 Tab 分离图片和共享裁剪数据
 let categoryData = {}; 
 
-rawData.forEach(d => {
+// 初始化构建数据，引入唯一ID方便寻址
+rawData.forEach((d, index) => {
     let [w, h] = d.sizeStr.split('*').map(Number);
     let isSquare = (w === h);
     if (!categories.includes(d.category)) {
@@ -195,8 +209,8 @@ rawData.forEach(d => {
         categoryData[d.category] = { img: null, sharedCrop: {x:0, y:0, w:100, h:100} };
     }
     items.push({
-        ...d, w, h, isCircle: d.resource.includes('圆'), isSquare,
-        localCropData: isSquare ? null : {x:0, y:0, w:100, h:100} // 非1:1独享
+        ...d, _id: index, w, h, isCircle: d.resource.includes('圆'), isSquare,
+        localCropData: isSquare ? null : {x:0, y:0, w:100, h:100} 
     });
 });
 
@@ -208,13 +222,17 @@ modalCropBox = document.getElementById('modalCropBox'), modalResize = document.g
 modalConfirm = document.getElementById('modalConfirm'), modalCancel = document.getElementById('modalCancel'),
 modalTitle = document.getElementById('modalTitle'), modalImgContainer = document.getElementById('modalImgContainer');
 
-// 初始化页面
+// 模板组件
+const templateFileInput = document.getElementById('templateFileInput'),
+modalTemplateImg = document.getElementById('modalTemplateImg'),
+templateOpacity = document.getElementById('templateOpacity'),
+clearTemplateBtn = document.getElementById('clearTemplateBtn');
+
 window.onload = () => {
     renderTabs();
     switchTab(categories[0]);
 };
 
-// 单页签传图逻辑
 tabFileInput.onchange = e => {
     if(e.target.files[0]) {
         const reader = new FileReader();
@@ -234,12 +252,10 @@ tabFileInput.onchange = e => {
 
 function initCropForCategory(cat) {
     const img = categoryData[cat].img;
-    // 初始化同Tab下的 1:1 共享选区
     let minSize = Math.min(img.width, img.height) * 0.7;
     categoryData[cat].sharedCrop = {
         x: (img.width - minSize) / 2, y: (img.height - minSize) / 2, w: minSize, h: minSize
     };
-    // 初始化同Tab下非 1:1 的独立选区
     items.filter(i => i.category === cat && !i.isSquare).forEach(item => {
         let targetRatio = item.w / item.h;
         let imgRatio = img.width / img.height;
@@ -304,7 +320,6 @@ function renderGrid() {
         
         const badgeHtml = !item.isSquare ? `<div class="badge">✨ 独立比例</div>` : '';
 
-        // 包含编辑和单图下载按钮
         card.innerHTML = `
             <div class="card-header">
                 <div><h3>${item.resource}</h3><p class="sub">${item.sizeStr} | ${item.isCircle?'圆形遮罩':'方形切图'}</p></div>
@@ -318,8 +333,18 @@ function renderGrid() {
                 <div class="preview"><canvas></canvas></div>
             </div>
             <div class="info-row"><span class="label">文件夹</span> <span class="val">${item.folder}</span></div>
-            <div class="info-row"><span class="label">文件名</span> <span class="val">${item.name}</span></div>
+            <div class="info-row" style="margin-bottom:0;"><span class="label">文件名</span> 
+                <input type="text" class="name-input" value="${item.name}" title="点击修改打包输出的文件名">
+            </div>
         `;
+        
+        // 绑定重命名事件
+        card.querySelector('.name-input').onchange = (e) => {
+            const newVal = e.target.value.trim();
+            if(newVal) item.name = newVal;
+            else e.target.value = item.name; // 恢复
+        };
+
         const cv = card.querySelector('canvas');
         const maxDisplaySize = 240;
         let displayW, displayH;
@@ -336,11 +361,15 @@ function renderGrid() {
     });
 }
 
-// 核心渲染逻辑 (引入 Translate 矩阵，完美支持负坐标和透明溢出)
+// 需求1核心逻辑：防锯齿与分步降采样 (Step-down Scaling) 算法
 function drawCanvas(canvas, item, sourceImg) {
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, item.w, item.h);
     if (!sourceImg) return;
+
+    // 开启高清抗锯齿
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
 
     const crop = item.isSquare ? categoryData[item.category].sharedCrop : item.localCropData;
     
@@ -351,20 +380,53 @@ function drawCanvas(canvas, item, sourceImg) {
         ctx.clip();
     }
     
-    // 矩阵映射算法：将源图缩放并平移，使选框区域(crop.x, crop.y)精准落在 Canvas 的 (0, 0)
-    ctx.scale(item.w / crop.w, item.h / crop.h);
-    ctx.translate(-crop.x, -crop.y);
-    ctx.drawImage(sourceImg, 0, 0);
+    // 如果原图选框比目标尺寸大超过 2 倍，采用二分之一阶梯降采样防止严重失真
+    const scaleRatio = item.w / crop.w;
+    if (scaleRatio < 0.5) {
+        let offCanvas = document.createElement('canvas');
+        let offCtx = offCanvas.getContext('2d');
+        offCtx.imageSmoothingEnabled = true; offCtx.imageSmoothingQuality = 'high';
+
+        let curW = crop.w; let curH = crop.h;
+        offCanvas.width = Math.ceil(curW); offCanvas.height = Math.ceil(curH);
+        offCtx.translate(-crop.x, -crop.y);
+        offCtx.drawImage(sourceImg, 0, 0);
+
+        while (curW * 0.5 > item.w) {
+            let nextW = curW * 0.5; let nextH = curH * 0.5;
+            let tempCanvas = document.createElement('canvas');
+            tempCanvas.width = Math.ceil(nextW); tempCanvas.height = Math.ceil(nextH);
+            let tempCtx = tempCanvas.getContext('2d');
+            tempCtx.imageSmoothingEnabled = true; tempCtx.imageSmoothingQuality = 'high';
+            tempCtx.drawImage(offCanvas, 0, 0, curW, curH, 0, 0, nextW, nextH);
+            
+            offCanvas = tempCanvas; offCtx = tempCtx;
+            curW = nextW; curH = nextH;
+        }
+        ctx.drawImage(offCanvas, 0, 0, curW, curH, 0, 0, item.w, item.h);
+    } else {
+        ctx.scale(item.w / crop.w, item.h / crop.h);
+        ctx.translate(-crop.x, -crop.y);
+        ctx.drawImage(sourceImg, 0, 0);
+    }
     ctx.restore();
 }
 
-// ---- 模态框交互逻辑 (无边界限制) ----
+// ---- 模态框交互逻辑 ----
 let activeItem = null;
 let isDragging = false, isResizing = false;
 let startMouseX, startMouseY, startCrop;
 let tempCrop = {x:0, y:0, w:0, h:0};
-// V3不再缩放原图，原尺寸渲染在模态框内，依靠CSS Overflow提供外围拖拽空间
-let modalScale = 1; 
+let visualRatio = 1; // 需求3：视觉换算比率
+
+function updateVisualRatio() {
+    if (!modal.classList.contains('active') || !modalImg.naturalWidth) return;
+    visualRatio = modalImg.clientWidth / modalImg.naturalWidth;
+    updateCropBoxDOM();
+}
+
+// 监听窗口尺寸变化重算比例
+window.addEventListener('resize', updateVisualRatio);
 
 function openModal(item) {
     activeItem = item;
@@ -378,16 +440,16 @@ function openModal(item) {
     modalImg.src = categoryData[item.category].img.src;
     modal.classList.add('active');
     
-    // 强制按实际像素比例交互
-    modalScale = 1;
-    updateCropBoxDOM();
+    // 给予浏览器一点时间渲染出 DOM 以获取真实尺寸
+    setTimeout(() => { updateVisualRatio(); }, 10);
 }
 
 function updateCropBoxDOM() {
-    modalCropBox.style.left = tempCrop.x + 'px';
-    modalCropBox.style.top = tempCrop.y + 'px';
-    modalCropBox.style.width = tempCrop.w + 'px';
-    modalCropBox.style.height = tempCrop.h + 'px';
+    // 渲染时乘以视觉缩放比
+    modalCropBox.style.left = (tempCrop.x * visualRatio) + 'px';
+    modalCropBox.style.top = (tempCrop.y * visualRatio) + 'px';
+    modalCropBox.style.width = (tempCrop.w * visualRatio) + 'px';
+    modalCropBox.style.height = (tempCrop.h * visualRatio) + 'px';
 }
 
 modalCropBox.onmousedown = e => {
@@ -401,11 +463,12 @@ modalCropBox.onmousedown = e => {
 
 window.onmousemove = e => {
     if(!isDragging && !isResizing) return;
-    const dx = e.clientX - startMouseX;
-    const dy = e.clientY - startMouseY;
+    
+    // 获取拖动偏移量并除以视觉缩放比还原真实像素
+    const dx = (e.clientX - startMouseX) / visualRatio;
+    const dy = (e.clientY - startMouseY) / visualRatio;
     
     if (isDragging) {
-        // V3：移除边界限制，允许选框超出图片
         tempCrop.x = startCrop.x + dx;
         tempCrop.y = startCrop.y + dy;
     } else if (isResizing) {
@@ -429,6 +492,30 @@ modalConfirm.onclick = () => {
 };
 modalCancel.onclick = () => modal.classList.remove('active');
 
+// ---- 需求4：模板图交互逻辑 ----
+templateFileInput.onchange = e => {
+    if(e.target.files[0]) {
+        const reader = new FileReader();
+        reader.onload = ev => {
+            modalTemplateImg.src = ev.target.result;
+            modalTemplateImg.style.display = 'block';
+            clearTemplateBtn.style.display = 'inline-block';
+        };
+        reader.readAsDataURL(e.target.files[0]);
+    }
+};
+
+templateOpacity.oninput = e => {
+    modalTemplateImg.style.opacity = e.target.value;
+};
+
+clearTemplateBtn.onclick = () => {
+    modalTemplateImg.src = '';
+    modalTemplateImg.style.display = 'none';
+    templateFileInput.value = '';
+    clearTemplateBtn.style.display = 'none';
+};
+
 // ---- 单图及 ZIP 导出 ----
 async function exportSingle(item) {
     const cv = document.createElement('canvas');
@@ -442,7 +529,6 @@ async function exportSingle(item) {
 }
 
 async function exportZip(itemsToExport, zipName) {
-    // 过滤掉当前分类下没有上传底图的数据
     itemsToExport = itemsToExport.filter(i => !!categoryData[i.category].img);
     if(itemsToExport.length === 0) return alert("选中的分类没有底图数据，无法打包！");
 
