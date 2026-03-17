@@ -247,6 +247,7 @@ tabFileInput.onchange = e => {
             newImg.src = ev.target.result;
         };
         reader.readAsDataURL(e.target.files[0]);
+        tabFileInput.value = '';
     }
 };
 
