@@ -11,7 +11,7 @@ from fastapi.responses import HTMLResponse, StreamingResponse
 from PIL import Image
 
 app = FastAPI()
-TOOL_NAME = os.environ.get("DISPLAY_NAME", "图片转 PDF")
+TOOL_NAME = os.environ.get("DISPLAY_NAME") or "图片转 PDF"
 
 pdf_store: dict[str, bytes] = {}
 

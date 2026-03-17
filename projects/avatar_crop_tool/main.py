@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 
 app = FastAPI()
-TOOL_NAME = os.environ.get("DISPLAY_NAME", "头像切图工业化工具 V3")
+TOOL_NAME = os.environ.get("DISPLAY_NAME") or "头像切图工业化工具 V3"
 
 @app.get("/", response_class=HTMLResponse)
 async def root():

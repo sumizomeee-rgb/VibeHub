@@ -12,7 +12,7 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import HTMLResponse, StreamingResponse
 
 app = FastAPI()
-TOOL_NAME = os.environ.get("DISPLAY_NAME", "PDF 转图片")
+TOOL_NAME = os.environ.get("DISPLAY_NAME") or "PDF 转图片"
 
 tasks: dict[str, dict] = {}
 

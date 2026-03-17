@@ -9,7 +9,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, Response
 from PIL import Image, ImageDraw
 
 app = FastAPI()
-TOOL_NAME = os.environ.get("DISPLAY_NAME", "角色立绘切图工具")
+TOOL_NAME = os.environ.get("DISPLAY_NAME") or "角色立绘切图工具"
 store: dict[str, bytes] = {}
 
 SPECS = [

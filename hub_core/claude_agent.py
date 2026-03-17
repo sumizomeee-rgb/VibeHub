@@ -55,7 +55,7 @@ def _build_mission_prompt(
 ### 运行规范
 3. 动态端口：使用 `int(os.environ.get("PORT", 8000))`，禁止硬编码。
 4. 绑定地址：仅 `127.0.0.1`，禁止 `0.0.0.0`。
-5. 工具显示名称：HTML 页面的 `<title>` 和页面主标题必须使用环境变量 `os.environ.get("DISPLAY_NAME", "工具")`，禁止硬编码中文标题。
+5. 工具显示名称：HTML 页面的 `<title>` 和页面主标题必须使用环境变量 `os.environ.get("DISPLAY_NAME") or "工具"`，禁止硬编码中文标题。
 6. 入口点：文件末尾必须是：
    ```python
    if __name__ == "__main__":
