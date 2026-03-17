@@ -30,7 +30,8 @@ ENV/
 # Project Specific
 bin/
 caddy_data/
-data/
+data/*
+!data/registry.json
 requirementDocument/
 runtime/
 *.log
