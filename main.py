@@ -48,7 +48,7 @@ async def resurrect_all_tools():
     for tool in recoverable:
         slug = tool["slug"]
         try:
-            pid, port = process_manager.start_tool(slug)
+            pid, port = process_manager.start_tool(slug, tool.get("display_name", ""))
             ready = await process_manager.wait_for_tool_ready(slug, timeout=30.0)
 
             if ready:

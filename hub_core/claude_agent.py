@@ -55,7 +55,8 @@ def _build_mission_prompt(
 ### 运行规范
 3. 动态端口：使用 `int(os.environ.get("PORT", 8000))`，禁止硬编码。
 4. 绑定地址：仅 `127.0.0.1`，禁止 `0.0.0.0`。
-5. 入口点：文件末尾必须是：
+5. 工具显示名称：HTML 页面的 `<title>` 和页面主标题必须使用环境变量 `os.environ.get("DISPLAY_NAME", "工具")`，禁止硬编码中文标题。
+6. 入口点：文件末尾必须是：
    ```python
    if __name__ == "__main__":
        import uvicorn
@@ -63,20 +64,20 @@ def _build_mission_prompt(
    ```
 
 ### URL 规范
-6. 本应用将被反向代理挂载在子路径 `/tools/{slug}/` 下。
+7. 本应用将被反向代理挂载在子路径 `/tools/{slug}/` 下。
    HTML/JS 中所有 fetch/XHR/form URL 必须是相对路径（无前导 `/`）。
    使用 `api/upload` 而非 `/api/upload`。
 
 ### UI 设计规范 (VibeHub 统一风格)
-7. 颜色：主色 #cba186，背景 #f0f2f5，白色卡片
-8. 卡片：border-radius: 16px, box-shadow: 0 2px 12px rgba(0,0,0,.08)
-9. 按钮：主按钮 #cba186，次按钮 #eee，下载按钮 #000，圆角 10px
-10. 布局：Header + 上传卡片 + 按钮行 + Grid 预览
-11. 响应式：桌面 3 列，平板 2 列，手机 1 列
-12. 所有 UI 文本使用中文
+8. 颜色：主色 #cba186，背景 #f0f2f5，白色卡片
+9. 卡片：border-radius: 16px, box-shadow: 0 2px 12px rgba(0,0,0,.08)
+10. 按钮：主按钮 #cba186，次按钮 #eee，下载按钮 #000，圆角 10px
+11. 布局：Header + 上传卡片 + 按钮行 + Grid 预览
+12. 响应式：桌面 3 列，平板 2 列，手机 1 列
+13. 所有 UI 文本使用中文
 
 ### 自测流程
-13. 写完 `main.py` 后，你**必须**自己验证代码可运行：
+14. 写完 `main.py` 后，你**必须**自己验证代码可运行：
     - 使用 Bash 工具执行：`PORT=18999 {uv_exe} run main.py &`（后台启动）
     - 等待 4 秒
     - 用 curl 测试 `http://127.0.0.1:18999/` 是否返回 2xx
@@ -85,7 +86,7 @@ def _build_mission_prompt(
     - 最多重试 3 次
 
 ### 完成信号
-14. 当你确认 `main.py` 已可正常运行且测试通过，直接结束即可。
+15. 当你确认 `main.py` 已可正常运行且测试通过，直接结束即可。
     不需要输出任何额外解释。
 """
 

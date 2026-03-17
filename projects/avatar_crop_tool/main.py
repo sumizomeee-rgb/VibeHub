@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 
 app = FastAPI()
+TOOL_NAME = os.environ.get("DISPLAY_NAME", "头像切图工业化工具 V3")
 
 @app.get("/", response_class=HTMLResponse)
 async def root():
@@ -16,7 +17,7 @@ async def root():
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>神威·头像切图工业化工具 V3</title>
+<title>{{TOOL_NAME}}</title>
 <style>
 :root{--primary:#cba186;--primary-hover:#b8906f;--bg:#f0f2f5;--card-bg:#fff;--border:#e8e8e8;--text-main:#333;--text-sub:#666;--text-light:#999}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -92,7 +93,7 @@ h1{font-size:22px;color:var(--text-main);display:flex;align-items:center;gap:8px
 <div class="header">
     <h1>
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-        头像切图工业化工具 V3
+        {{TOOL_NAME}}
     </h1>
     <div class="header-btns" id="exportBtns">
         <button class="btn-primary" id="btnExportCategory">
@@ -556,7 +557,7 @@ document.getElementById('btnExportCategory').onclick = () => exportZip(items.fil
 document.getElementById('btnExportAll').onclick = () => exportZip(items, `神威_全量资源_${Date.now()}`);
 </script>
 </body>
-</html>"""
+</html>""".replace("{{TOOL_NAME}}", TOOL_NAME)
 
 if __name__ == "__main__":
     import uvicorn

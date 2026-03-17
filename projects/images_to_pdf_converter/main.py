@@ -11,6 +11,7 @@ from fastapi.responses import HTMLResponse, StreamingResponse
 from PIL import Image
 
 app = FastAPI()
+TOOL_NAME = os.environ.get("DISPLAY_NAME", "图片转 PDF")
 
 pdf_store: dict[str, bytes] = {}
 
@@ -20,7 +21,7 @@ async def index():
     return HTML
 
 HTML = r"""<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>图片转 PDF</title><style>
+<title>{{TOOL_NAME}}</title><style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:system-ui,sans-serif;background:#f0f2f5;min-height:100vh;padding:20px}
 .header{display:flex;justify-content:space-between;align-items:center;max-width:1100px;margin:0 auto 20px;padding:16px 24px;background:#fff;border-radius:16px;box-shadow:0 2px 12px rgba(0,0,0,.08)}
@@ -45,7 +46,7 @@ body{font-family:system-ui,sans-serif;background:#f0f2f5;min-height:100vh;paddin
 .progress-bar .fill{height:100%;background:#cba186;width:0;transition:width .3s}
 </style></head><body>
 <div class="header">
-<h1>图片转 PDF</h1>
+<h1>{{TOOL_NAME}}</h1>
 </div>
 <div class="upload-card">
 <h2>上传图片</h2>
@@ -88,7 +89,7 @@ statusEl.textContent='✓ PDF 生成成功！';downloadBtn.style.display='inline
 catch(e){statusEl.textContent='✗ '+e.message}
 finally{convertBtn.disabled=false;setTimeout(()=>{progressBar.style.display='none';progressFill.style.width='0'},800)}}
 function download(){if(!pdfId)return;const a=document.createElement('a');a.href='api/download/'+pdfId;a.download='images.pdf';document.body.append(a);a.click();a.remove()}
-</script></body></html>"""
+</script></body></html>""".replace("{{TOOL_NAME}}", TOOL_NAME)
 
 
 @app.post("/api/convert")

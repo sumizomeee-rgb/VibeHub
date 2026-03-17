@@ -97,7 +97,7 @@ async def start_tool(slug: str):
     if process_manager.is_tool_alive(slug):
         return {"ok": True, "message": "已在运行"}
     try:
-        pid, port = process_manager.start_tool(slug)
+        pid, port = process_manager.start_tool(slug, tool.get("display_name", ""))
         ready = await process_manager.wait_for_tool_ready(slug, timeout=30.0)
         if ready:
             await caddy_gateway.add_route(slug, port)
@@ -128,7 +128,7 @@ async def restart_tool(slug: str):
     try:
         process_manager.stop_tool(slug)
         await caddy_gateway.remove_route(slug)
-        pid, port = process_manager.start_tool(slug)
+        pid, port = process_manager.start_tool(slug, tool.get("display_name", ""))
         ready = await process_manager.wait_for_tool_ready(slug, timeout=30.0)
         if ready:
             await caddy_gateway.add_route(slug, port)

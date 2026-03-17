@@ -9,6 +9,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, Response
 from PIL import Image, ImageDraw
 
 app = FastAPI()
+TOOL_NAME = os.environ.get("DISPLAY_NAME", "角色立绘切图工具")
 store: dict[str, bytes] = {}
 
 SPECS = [
@@ -95,7 +96,7 @@ async def index():
     return HTML
 
 HTML = r"""<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>角色立绘切图工具</title><style>
+<title>{{TOOL_NAME}}</title><style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:system-ui,sans-serif;background:#f0f2f5;min-height:100vh;padding:20px}
 .header{display:flex;justify-content:space-between;align-items:center;max-width:1100px;margin:0 auto 20px;padding:16px 24px;background:#fff;border-radius:16px;box-shadow:0 2px 12px rgba(0,0,0,.08)}
@@ -137,7 +138,7 @@ input[type=file]{display:none}
 @media(max-width:640px){.specGrid{grid-template-columns:1fr}}
 </style></head><body>
 <div class="header">
-<h1>角色立绘切图工具</h1>
+<h1>{{TOOL_NAME}}</h1>
 <div class="actions">
 <button class="btn btn-secondary" id="reBtn" style="display:none" onclick="reset()">更换素材</button>
 </div></div>
@@ -257,7 +258,7 @@ const r=await fetch('api/preview',{method:'POST',body:fd});const d=await r.json(
 const p=d[editKey];$('#mPreview').src='data:image/png;base64,'+p.data;
 $('#mSize').textContent=`${p.w}×${p.h}px`;
 }
-</script></body></html>"""
+</script></body></html>""".replace("{{TOOL_NAME}}", TOOL_NAME)
 
 if __name__ == "__main__":
     import uvicorn

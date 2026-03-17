@@ -12,6 +12,7 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import HTMLResponse, StreamingResponse
 
 app = FastAPI()
+TOOL_NAME = os.environ.get("DISPLAY_NAME", "PDF 转图片")
 
 tasks: dict[str, dict] = {}
 
@@ -20,7 +21,7 @@ async def index():
     return HTML
 
 HTML = r"""<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PDF 转图片</title><style>
+<title>{{TOOL_NAME}}</title><style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:system-ui,sans-serif;background:#f0f2f5;min-height:100vh;padding:20px}
 .header{display:flex;justify-content:space-between;align-items:center;max-width:1100px;margin:0 auto 20px;padding:16px 24px;background:#fff;border-radius:16px;box-shadow:0 2px 12px rgba(0,0,0,.08)}
@@ -51,7 +52,7 @@ body{font-family:system-ui,sans-serif;background:#f0f2f5;min-height:100vh;paddin
 .err{max-width:1100px;margin:0 auto;text-align:center;color:#e74c3c;font-size:14px;display:none}
 </style></head><body>
 <div class="header">
-<h1>PDF 转图片</h1>
+<h1>{{TOOL_NAME}}</h1>
 </div>
 <div class="upload-card">
 <h2>上传 PDF 文件</h2>
@@ -98,7 +99,7 @@ progressFill.style.width='100%';progressText.textContent='转换完成!';preview
 catch(e){errorMsg.textContent=e.message;errorMsg.style.display='block';progressWrap.style.display='none'}
 convertBtn.disabled=false}
 function download(){if(currentTaskId)window.location.href=BASE+'download/'+currentTaskId}
-</script></body></html>"""
+</script></body></html>""".replace("{{TOOL_NAME}}", TOOL_NAME)
 
 
 @app.post("/convert")

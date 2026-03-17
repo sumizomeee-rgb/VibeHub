@@ -205,7 +205,7 @@ async def _run_build_locked(task, slug, display_name, prompt, existing_code, edi
         process_manager.stop_tool(edit_slug)
         await caddy_gateway.remove_route(edit_slug)
 
-    pid, port = process_manager.start_tool(slug)
+    pid, port = process_manager.start_tool(slug, display_name)
     ready = await process_manager.wait_for_tool_ready(slug, timeout=30.0)
 
     if not ready:
@@ -219,7 +219,7 @@ async def _run_build_locked(task, slug, display_name, prompt, existing_code, edi
                 import shutil
                 shutil.copy(backup_path, script_path)
                 process_manager.stop_tool(slug)
-                pid, port = process_manager.start_tool(slug)
+                pid, port = process_manager.start_tool(slug, display_name)
                 ready = await process_manager.wait_for_tool_ready(slug, timeout=30.0)
                 if ready:
                     await caddy_gateway.add_route(slug, port)

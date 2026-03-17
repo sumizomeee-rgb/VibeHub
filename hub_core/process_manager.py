@@ -15,7 +15,7 @@ log = logging.getLogger("vibehub.process")
 _running_tools: dict[str, dict] = {}
 
 
-def start_tool(slug: str) -> tuple[int, int]:
+def start_tool(slug: str, display_name: str = "") -> tuple[int, int]:
     """启动工具子进程，返回 (pid, port)"""
     script_path = PROJECTS_DIR / slug / "main.py"
     if not script_path.exists():
@@ -25,7 +25,7 @@ def start_tool(slug: str) -> tuple[int, int]:
     LOGS_DIR.mkdir(parents=True, exist_ok=True)
     log_file = LOGS_DIR / f"{slug}.log"
 
-    env = {**os.environ, "PORT": str(port)}
+    env = {**os.environ, "PORT": str(port), "DISPLAY_NAME": display_name}
     proc = subprocess.Popen(
         [str(UV_EXE), "run", str(script_path)],
         env=env,
