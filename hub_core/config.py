@@ -8,6 +8,7 @@ DATA_DIR = ROOT / "data"
 PROJECTS_DIR = ROOT / "projects"
 LOGS_DIR = DATA_DIR / "logs" / "tools"
 REGISTRY_FILE = DATA_DIR / "registry.json"
+REGISTRY_STATE_FILE = DATA_DIR / "registry_state.json"
 
 UV_EXE = BIN_DIR / "uv.exe"
 CADDY_EXE = BIN_DIR / "caddy.exe"
