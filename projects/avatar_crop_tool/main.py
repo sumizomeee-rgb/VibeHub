@@ -113,6 +113,10 @@ h1{font-size:22px;color:var(--text-main);display:flex;align-items:center;gap:8px
 .color-swatch{width:26px;height:26px;border-radius:6px;cursor:pointer;border:2px solid transparent;transition:all .2s;flex-shrink:0}
 .color-swatch:hover{transform:scale(1.15);box-shadow:0 2px 8px rgba(0,0,0,.15)}
 .color-swatch.active{border-color:#333;box-shadow:0 0 0 2px rgba(0,0,0,.15)}
+.exclude-toggle{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:12px;color:var(--text-light);cursor:pointer;user-select:none}
+.exclude-toggle input{accent-color:var(--primary);width:14px;height:14px;cursor:pointer}
+.card.excluded{opacity:0.45}
+.card.excluded .preview{filter:grayscale(0.8)}
 
 @media(max-width:768px){.grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:480px){.grid{grid-template-columns:1fr}}
@@ -276,6 +280,7 @@ rawData.forEach((d, index) => {
     items.push({
         ...d, _id: index, w, h, isCircle: d.resource.includes('圆'), isSquare,
         bg: d.bg || null,
+        excluded: false,
         localCropData: isSquare ? null : {x:0, y:0, w:100, h:100}
     });
 });
@@ -458,7 +463,7 @@ function renderGrid() {
 
     currentItems.forEach(item => {
         const card = document.createElement('div');
-        card.className = 'card' + (!item.isSquare ? ' independent' : '');
+        card.className = 'card' + (!item.isSquare ? ' independent' : '') + (item.excluded ? ' excluded' : '');
 
         const badgeHtml = !item.isSquare ? '<div class="badge">独立比例</div>' : '';
         const bgLabel = item.bg ? ' | 黑底' : '';
@@ -476,14 +481,23 @@ function renderGrid() {
                 '<div class="preview"><canvas></canvas></div>' +
             '</div>' +
             '<div class="info-row"><span class="label">文件夹</span> <span class="val">' + item.folder + '</span></div>' +
-            '<div class="info-row" style="margin-bottom:0;"><span class="label">文件名</span> ' +
+            '<div class="info-row"><span class="label">文件名</span> ' +
                 '<input type="text" class="name-input" value="' + item.name + '" title="点击修改打包输出的文件名">' +
-            '</div>';
+            '</div>' +
+            '<label class="exclude-toggle">' +
+                '<input type="checkbox" class="exclude-cb"' + (item.excluded ? ' checked' : '') + '>' +
+                '<span>排除下载</span>' +
+            '</label>';
 
         card.querySelector('.name-input').onchange = (e) => {
             const newVal = e.target.value.trim();
             if(newVal) item.name = newVal;
             else e.target.value = item.name;
+        };
+
+        card.querySelector('.exclude-cb').onchange = (e) => {
+            item.excluded = e.target.checked;
+            card.classList.toggle('excluded', item.excluded);
         };
 
         const cv = card.querySelector('canvas');
@@ -546,9 +560,9 @@ function drawCanvas(canvas, item, sourceImg) {
         ctx.clip();
     }
 
-    // 背景填充（如黑底项）
-    if (item.bg) {
-        ctx.fillStyle = item.bg;
+    // 背景填充（成就页签全黑底 + 指定黑底项）
+    if (item.bg || item.category === '成就') {
+        ctx.fillStyle = item.bg || '#000';
         ctx.fillRect(0, 0, item.w, item.h);
     }
 
@@ -692,7 +706,7 @@ async function exportSingle(item) {
 }
 
 async function exportZip(itemsToExport, zipName) {
-    itemsToExport = itemsToExport.filter(i => !!categoryData[i.category].img);
+    itemsToExport = itemsToExport.filter(i => !!categoryData[i.category].img && !i.excluded);
     if(itemsToExport.length === 0) return alert('选中的分类没有底图数据，无法打包！');
 
     const zip = new JSZip();
