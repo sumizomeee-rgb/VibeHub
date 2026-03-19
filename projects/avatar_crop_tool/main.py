@@ -62,8 +62,8 @@ h1{font-size:22px;color:var(--text-main);display:flex;align-items:center;gap:8px
 .info-row{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#555;background:#f8f9fa;padding:8px 12px;border-radius:6px;margin-bottom:6px}
 .info-row span.label{color:var(--text-light);flex-shrink:0;}
 .info-row span.val{font-family:monospace;font-size:13px;word-break:break-all;text-align:right;}
-.name-input{border:1px solid transparent;background:transparent;font-family:monospace;font-size:13px;text-align:right;width:100%;color:var(--text-main);transition:all .2s;padding:2px 4px;border-radius:4px;outline:none;}
-.name-input:hover, .name-input:focus{border-color:var(--primary);background:#fff;box-shadow:0 0 0 2px rgba(203,161,134,.1);}
+.name-input{border:1px dashed var(--border);background:#fafbfc;font-family:monospace;font-size:13px;text-align:right;width:100%;color:var(--text-main);transition:all .2s;padding:2px 20px 2px 4px;border-radius:4px;outline:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'%3E%3Cpath d='M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7'/%3E%3Cpath d='M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 4px center;}
+.name-input:hover, .name-input:focus{border-color:var(--primary);border-style:solid;background-color:#fff;box-shadow:0 0 0 2px rgba(203,161,134,.15);}
 
 .empty-state{grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text-light);background:#fafbfc;border-radius:12px;border:2px dashed var(--border)}
 .empty-state svg{margin-bottom:16px;opacity:0.5}
@@ -75,9 +75,9 @@ h1{font-size:22px;color:var(--text-main);display:flex;align-items:center;gap:8px
 .modal-title{font-size:18px;font-weight:600;display:flex;align-items:center;gap:8px}
 .modal-tips{font-size:13px;color:var(--primary);background:#fff3eb;padding:6px 12px;border-radius:6px;margin-top:8px;display:inline-block;}
 .modal-template-tools{display:flex;gap:12px;align-items:center;background:#fafbfc;padding:8px 16px;border-radius:8px;border:1px solid var(--border);}
-.modal-canvas-wrap{flex:1;position:relative;user-select:none;overflow:hidden;border-radius:8px;background:repeating-conic-gradient(#f4f4f4 0 25%,#fff 0 50%) 0 0/16px 16px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;padding:20px}
-.modal-img-container{position:relative;max-width:100%;max-height:100%;display:inline-block;box-shadow:0 0 20px rgba(0,0,0,.1)}
-.modal-img-container img{display:block;max-width:100%;max-height:100%;width:auto;height:auto;opacity:0.8}
+.modal-canvas-wrap{flex:1;min-height:0;position:relative;user-select:none;overflow:hidden;border-radius:8px;background:repeating-conic-gradient(#f4f4f4 0 25%,#fff 0 50%) 0 0/16px 16px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;padding:20px}
+.modal-img-container{position:relative;display:inline-block;box-shadow:0 0 20px rgba(0,0,0,.1)}
+.modal-img-container img{display:block;width:100%;height:100%;opacity:0.8}
 .modal-crop-box{position:absolute;outline:2px solid var(--primary);cursor:move;box-shadow:0 0 0 9999px rgba(0,0,0,.5)}
 .modal-grid{position:absolute;inset:0;pointer-events:none;border:1px solid rgba(255,255,255,.3);z-index:10;}
 .modal-grid::before{content:'';position:absolute;top:33.3%;bottom:33.3%;left:0;right:0;border-top:1px dashed rgba(255,255,255,.5);border-bottom:1px dashed rgba(255,255,255,.5)}
@@ -364,53 +364,70 @@ function renderGrid() {
 }
 
 // 需求1核心逻辑：防锯齿与分步降采样 (Step-down Scaling) 算法
+// 安全提取裁切区域（支持选框超出图片边界的情况）
+function extractCropRegion(sourceImg, crop) {
+    const cw = Math.ceil(crop.w), ch = Math.ceil(crop.h);
+    // 浏览器 canvas 面积上限约 2.68 亿像素，超限时先缩到安全范围
+    const MAX_AREA = 268435456;
+    let safeW = cw, safeH = ch;
+    if (safeW * safeH > MAX_AREA) {
+        const scale = Math.sqrt(MAX_AREA / (safeW * safeH));
+        safeW = Math.floor(safeW * scale);
+        safeH = Math.floor(safeH * scale);
+    }
+    const off = document.createElement('canvas');
+    off.width = safeW; off.height = safeH;
+    const offCtx = off.getContext('2d');
+    offCtx.imageSmoothingEnabled = true;
+    offCtx.imageSmoothingQuality = 'high';
+    // 计算源图与裁切框的交集，只绘制有效像素（支持选框超出图片外部）
+    const sx = Math.max(0, crop.x), sy = Math.max(0, crop.y);
+    const sx2 = Math.min(sourceImg.naturalWidth || sourceImg.width, crop.x + crop.w);
+    const sy2 = Math.min(sourceImg.naturalHeight || sourceImg.height, crop.y + crop.h);
+    if (sx2 > sx && sy2 > sy) {
+        const scX = safeW / crop.w, scY = safeH / crop.h;
+        const dx = (sx - crop.x) * scX, dy = (sy - crop.y) * scY;
+        const dw = (sx2 - sx) * scX, dh = (sy2 - sy) * scY;
+        offCtx.drawImage(sourceImg, sx, sy, sx2 - sx, sy2 - sy, dx, dy, dw, dh);
+    }
+    return { canvas: off, w: safeW, h: safeH };
+}
+
 function drawCanvas(canvas, item, sourceImg) {
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, item.w, item.h);
     if (!sourceImg) return;
 
-    // 开启高清抗锯齿
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
 
     const crop = item.isSquare ? categoryData[item.category].sharedCrop : item.localCropData;
-    
+
     ctx.save();
     if (item.isCircle) {
         ctx.beginPath();
         ctx.arc(item.w/2, item.h/2, Math.min(item.w, item.h)/2, 0, Math.PI*2);
         ctx.clip();
     }
-    
-    // 如果原图选框比目标尺寸大超过 2 倍，采用二分之一阶梯降采样防止严重失真
-    const scaleRatio = item.w / crop.w;
-    if (scaleRatio < 0.5) {
-        let offCanvas = document.createElement('canvas');
-        let offCtx = offCanvas.getContext('2d');
-        offCtx.imageSmoothingEnabled = true; offCtx.imageSmoothingQuality = 'high';
 
-        let curW = crop.w; let curH = crop.h;
-        offCanvas.width = Math.ceil(curW); offCanvas.height = Math.ceil(curH);
-        offCtx.translate(-crop.x, -crop.y);
-        offCtx.drawImage(sourceImg, 0, 0);
+    // 精确提取裁切区域
+    let { canvas: srcCanvas, w: curW, h: curH } = extractCropRegion(sourceImg, crop);
 
-        while (curW * 0.5 > item.w) {
-            let nextW = curW * 0.5; let nextH = curH * 0.5;
-            let tempCanvas = document.createElement('canvas');
-            tempCanvas.width = Math.ceil(nextW); tempCanvas.height = Math.ceil(nextH);
-            let tempCtx = tempCanvas.getContext('2d');
-            tempCtx.imageSmoothingEnabled = true; tempCtx.imageSmoothingQuality = 'high';
-            tempCtx.drawImage(offCanvas, 0, 0, curW, curH, 0, 0, nextW, nextH);
-            
-            offCanvas = tempCanvas; offCtx = tempCtx;
-            curW = nextW; curH = nextH;
-        }
-        ctx.drawImage(offCanvas, 0, 0, curW, curH, 0, 0, item.w, item.h);
-    } else {
-        ctx.scale(item.w / crop.w, item.h / crop.h);
-        ctx.translate(-crop.x, -crop.y);
-        ctx.drawImage(sourceImg, 0, 0);
+    // 阶梯降采样：每步缩小一半，直到接近目标尺寸，防止大比例缩放产生锯齿
+    while (curW > item.w * 2 || curH > item.h * 2) {
+        let nextW = Math.max(Math.ceil(curW * 0.5), item.w);
+        let nextH = Math.max(Math.ceil(curH * 0.5), item.h);
+        let tempCanvas = document.createElement('canvas');
+        tempCanvas.width = nextW; tempCanvas.height = nextH;
+        let tempCtx = tempCanvas.getContext('2d');
+        tempCtx.imageSmoothingEnabled = true;
+        tempCtx.imageSmoothingQuality = 'high';
+        tempCtx.drawImage(srcCanvas, 0, 0, curW, curH, 0, 0, nextW, nextH);
+        srcCanvas = tempCanvas;
+        curW = nextW; curH = nextH;
     }
+    // 最终缩放到目标尺寸
+    ctx.drawImage(srcCanvas, 0, 0, curW, curH, 0, 0, item.w, item.h);
     ctx.restore();
 }
 
@@ -427,23 +444,47 @@ function updateVisualRatio() {
     updateCropBoxDOM();
 }
 
-// 监听窗口尺寸变化重算比例
-window.addEventListener('resize', updateVisualRatio);
+// 监听窗口尺寸变化重新自适应
+window.addEventListener('resize', () => {
+    if (modal.classList.contains('active')) fitModalImage();
+});
+
+function fitModalImage() {
+    const wrap = document.getElementById('modalWrap');
+    const wrapRect = wrap.getBoundingClientRect();
+    const availW = wrapRect.width - 40;
+    const availH = wrapRect.height - 40;
+    const natW = modalImg.naturalWidth, natH = modalImg.naturalHeight;
+    if (!natW || !natH) return;
+    let dispW = natW, dispH = natH;
+    // 如果原图尺寸超出可用区域，按比例缩小自适应
+    if (dispW > availW || dispH > availH) {
+        const ratio = Math.min(availW / dispW, availH / dispH);
+        dispW = Math.floor(dispW * ratio);
+        dispH = Math.floor(dispH * ratio);
+    }
+    modalImgContainer.style.width = dispW + 'px';
+    modalImgContainer.style.height = dispH + 'px';
+    updateVisualRatio();
+}
 
 function openModal(item) {
     activeItem = item;
     const isGlobal = item.isSquare;
     modalTitle.innerHTML = isGlobal ? `编辑：${item.category} 共享选区 (1:1)` : `编辑：${item.resource} 独立选区 (${item.sizeStr})`;
     modalConfirm.innerText = isGlobal ? "保存共享选区 (应用至当前分类)" : "保存独立选区";
-    
+
     const sourceCrop = isGlobal ? categoryData[item.category].sharedCrop : item.localCropData;
     tempCrop = { ...sourceCrop };
-    
-    modalImg.src = categoryData[item.category].img.src;
+
     modal.classList.add('active');
-    
-    // 给予浏览器一点时间渲染出 DOM 以获取真实尺寸
-    setTimeout(() => { updateVisualRatio(); }, 10);
+    const srcImg = categoryData[item.category].img;
+    if (modalImg.src === srcImg.src && modalImg.naturalWidth) {
+        fitModalImage();
+    } else {
+        modalImg.onload = () => fitModalImage();
+        modalImg.src = srcImg.src;
+    }
 }
 
 function updateCropBoxDOM() {
