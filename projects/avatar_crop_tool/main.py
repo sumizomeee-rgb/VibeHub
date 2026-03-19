@@ -4,11 +4,28 @@
 # ///
 
 import os
+import pathlib
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 
 app = FastAPI()
 TOOL_NAME = os.environ.get("DISPLAY_NAME") or "头像切图工业化工具 V3"
+ASSETS_DIR = pathlib.Path(__file__).parent / "assets"
+app.mount("/assets", StaticFiles(directory=str(ASSETS_DIR)), name="assets")
+
+
+@app.get("/api/reference-images")
+async def list_reference_images():
+    images = []
+    if ASSETS_DIR.exists():
+        for f in sorted(ASSETS_DIR.glob("crop_reference_*.png")):
+            images.append({
+                "name": f.stem.replace("crop_reference_", "参考图 "),
+                "url": f"assets/{f.name}"
+            })
+    return images
+
 
 @app.get("/", response_class=HTMLResponse)
 async def root():
@@ -17,6 +34,8 @@ async def root():
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<script>document.write('<base href="'+location.pathname.replace(/\\/?$/,'/')+'">');
+</script>
 <title>{{TOOL_NAME}}</title>
 <style>
 :root{--primary:#cba186;--primary-hover:#b8906f;--bg:#f0f2f5;--card-bg:#fff;--border:#e8e8e8;--text-main:#333;--text-sub:#666;--text-light:#999}
@@ -39,7 +58,7 @@ h1{font-size:22px;color:var(--text-main);display:flex;align-items:center;gap:8px
 .tab-btn:hover{color:var(--primary);border-color:var(--primary)}
 .tab-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
 
-.tab-toolbar{display:flex;justify-content:space-between;align-items:center;background:#fafbfc;padding:16px 20px;border-radius:12px;margin-bottom:24px;border:1px solid var(--border)}
+.tab-toolbar{display:flex;justify-content:space-between;align-items:center;background:#fafbfc;padding:16px 20px;border-radius:12px;margin-bottom:24px;border:1px solid var(--border);flex-wrap:wrap;gap:12px}
 .tab-status{display:flex;align-items:center;gap:12px;font-size:14px;color:var(--text-sub)}
 .status-dot{width:10px;height:10px;border-radius:50%;background:#ccc}
 .status-dot.active{background:#52c41a;box-shadow:0 0 0 3px rgba(82,196,26,.2)}
@@ -71,10 +90,10 @@ h1{font-size:22px;color:var(--text-main);display:flex;align-items:center;gap:8px
 .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:1000;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
 .modal.active{display:flex}
 .modal-content{background:var(--card-bg);border-radius:16px;padding:24px;width:95vw;max-width:1200px;height:90vh;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(0,0,0,.2)}
-.modal-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;flex-shrink:0}
+.modal-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;flex-shrink:0;flex-wrap:wrap;gap:12px}
 .modal-title{font-size:18px;font-weight:600;display:flex;align-items:center;gap:8px}
 .modal-tips{font-size:13px;color:var(--primary);background:#fff3eb;padding:6px 12px;border-radius:6px;margin-top:8px;display:inline-block;}
-.modal-template-tools{display:flex;gap:12px;align-items:center;background:#fafbfc;padding:8px 16px;border-radius:8px;border:1px solid var(--border);}
+.modal-template-tools{display:flex;gap:12px;align-items:center;background:#fafbfc;padding:8px 16px;border-radius:8px;border:1px solid var(--border);flex-wrap:wrap;}
 .modal-canvas-wrap{flex:1;min-height:0;position:relative;user-select:none;overflow:hidden;border-radius:8px;background:repeating-conic-gradient(#f4f4f4 0 25%,#fff 0 50%) 0 0/16px 16px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;padding:20px}
 .modal-img-container{position:relative;display:inline-block;box-shadow:0 0 20px rgba(0,0,0,.1)}
 .modal-img-container img{display:block;width:100%;height:100%;opacity:0.8}
@@ -84,6 +103,17 @@ h1{font-size:22px;color:var(--text-main);display:flex;align-items:center;gap:8px
 .modal-grid::after{content:'';position:absolute;left:33.3%;right:33.3%;top:0;bottom:0;border-left:1px dashed rgba(255,255,255,.5);border-right:1px dashed rgba(255,255,255,.5)}
 .modal-resize{position:absolute;right:-7px;bottom:-7px;width:14px;height:14px;background:var(--primary);border:2px solid #fff;border-radius:50%;cursor:nwse-resize;box-shadow:0 2px 4px rgba(0,0,0,.2);z-index:11;}
 .modal-btns{display:flex;gap:12px;justify-content:flex-end;margin-top:20px;flex-shrink:0}
+
+.ref-gallery{display:flex;gap:6px;align-items:center}
+.ref-thumb{width:36px;height:36px;border-radius:6px;object-fit:cover;border:2px solid var(--border);cursor:pointer;transition:all .2s;background:#f5f5f5}
+.ref-thumb:hover{border-color:var(--primary);transform:scale(1.1)}
+.ref-thumb.active{border-color:var(--primary);box-shadow:0 0 0 2px rgba(203,161,134,.3)}
+.overlay-tools{display:flex;align-items:center;gap:10px;background:#fff3eb;padding:8px 14px;border-radius:8px;border:1px solid rgba(203,161,134,.3)}
+.color-palette{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+.color-swatch{width:26px;height:26px;border-radius:6px;cursor:pointer;border:2px solid transparent;transition:all .2s;flex-shrink:0}
+.color-swatch:hover{transform:scale(1.15);box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.color-swatch.active{border-color:#333;box-shadow:0 0 0 2px rgba(0,0,0,.15)}
+
 @media(max-width:768px){.grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:480px){.grid{grid-template-columns:1fr}}
 </style>
@@ -109,14 +139,19 @@ h1{font-size:22px;color:var(--text-main);display:flex;align-items:center;gap:8px
 
 <div class="workspace">
     <div class="tabs" id="tabsContainer"></div>
-    
+
     <div class="tab-toolbar">
         <div class="tab-status" id="tabStatus">
             <div class="status-dot" id="statusDot"></div>
             <img class="img-preview-thumb" id="statusThumb" src="" style="display:none">
             <span id="statusText">当前页签未上传底图</span>
         </div>
-        <div>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <div class="overlay-tools" id="achievementTools" style="display:none;">
+                <span style="font-size:13px;color:var(--primary);font-weight:600;">覆盖层</span>
+                <div class="color-palette" id="colorPalette"></div>
+                <input type="color" id="overlayColorPicker" value="#cba186" style="width:28px;height:28px;border:none;padding:0;cursor:pointer;border-radius:4px;" title="自定义颜色">
+            </div>
             <button class="btn-primary" onclick="document.getElementById('tabFileInput').click()">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
                 上传/更换底图
@@ -134,15 +169,12 @@ h1{font-size:22px;color:var(--text-main);display:flex;align-items:center;gap:8px
     <div class="modal-header">
         <div>
             <div class="modal-title" id="modalTitle">编辑区域</div>
-            <div class="modal-tips">✨ 提示：选框可以拖拽到图片外部，超出部分将自动补齐为透明底</div>
+            <div class="modal-tips">提示：选框可以拖拽到图片外部，超出部分将自动补齐为透明底</div>
         </div>
         <div class="modal-template-tools">
-            <span style="font-size:12px; color:var(--text-sub); font-weight:600;">外置模板比对</span>
+            <span style="font-size:12px; color:var(--text-sub); font-weight:600;">透明参考图</span>
+            <div class="ref-gallery" id="refGallery"></div>
             <input type="range" id="templateOpacity" min="0" max="1" step="0.1" value="0.5" style="width:70px" title="调整模板透明度">
-            <label class="btn-outline" style="cursor:pointer; padding:4px 10px; margin:0;">
-                上传透明参考图
-                <input type="file" id="templateFileInput" accept="image/*" style="display:none">
-            </label>
             <button class="btn-outline" id="clearTemplateBtn" style="display:none; padding:4px 10px; color:#ff4d4f; border-color:#ffb3b3; background:#fff1f0; margin:0;">清除</button>
         </div>
     </div>
@@ -171,11 +203,18 @@ const rawData = [
     { category: '基础头像', resource: '头像圆-小', folder: 'Role', name: 'RoleHeadR4Shenwei2', sizeStr: '140*140' },
     { category: '基础头像', resource: '头像方-大', folder: 'RoleCharacter', name: 'RoleHeadR4Shenwei1', sizeStr: '800*800' },
     { category: '基础头像', resource: '战队头像方-大', folder: 'RolePlayer', name: 'RoleHeadR4Shenwei1', sizeStr: '800*800' },
+    { category: '基础头像', resource: '头像方-中', folder: 'RolePlayerSp', name: 'RoleHeadR4Shenwei1Mid', sizeStr: '256*256' },
+    { category: '基础头像', resource: '头像圆-中', folder: 'RolePlayerSp', name: 'RoleHeadR4Shenwei2Mid', sizeStr: '256*256' },
+    { category: '基础头像', resource: '头像方-极小', folder: 'Role', name: 'RoleHeadR4Shenwei1Sm', sizeStr: '128*128' },
+    { category: '基础头像', resource: '头像圆-极小', folder: 'Role', name: 'RoleHeadR4Shenwei2Sm', sizeStr: '128*128' },
     { category: '终解头像', resource: '头像方-小', folder: 'Role', name: 'RoleHeadR4Shenwei3', sizeStr: '140*140' },
     { category: '终解头像', resource: '头像圆-小', folder: 'Role', name: 'RoleHeadR4Shenwei4', sizeStr: '140*140' },
     { category: '终解头像', resource: '头像方-大', folder: 'RoleCharacter', name: 'RoleHeadR4Shenwei3', sizeStr: '800*800' },
     { category: '终解头像', resource: '战队头像方-大', folder: 'RolePlayer', name: 'RoleHeadR4Shenwei3', sizeStr: '800*800' },
     { category: '终解头像', resource: '战队头像圆', folder: 'RolePlayerSp', name: 'RoleHeadR4Shenwei4', sizeStr: '256*256' },
+    { category: '终解头像', resource: '头像圆-黑底', folder: 'RolePlayerSp', name: 'RoleHeadR4Shenwei4BK', sizeStr: '256*256', bg: '#000' },
+    { category: '终解头像', resource: '头像方-极小', folder: 'Role', name: 'RoleHeadR4Shenwei3Sm', sizeStr: '128*128' },
+    { category: '终解头像', resource: '头像圆-极小', folder: 'Role', name: 'RoleHeadR4Shenwei4Sm', sizeStr: '128*128' },
     { category: 'Q版头像', resource: '头像方', folder: 'Role', name: 'RoleHeadR4Shenwei1Q', sizeStr: '140*140' },
     { category: 'Q版头像', resource: '头像圆', folder: 'Role', name: 'RoleHeadR4Shenwei2Q', sizeStr: '140*140' },
     { category: '道具图标', resource: '头像道具-大', folder: 'IconTools', name: 'RoleHeadR4Shenwei2', sizeStr: '256*256' },
@@ -196,12 +235,37 @@ const rawData = [
     { category: '伴生特效涂装', resource: '伴生特效皮战队头像-圆', folder: 'RolePlayerSp', name: 'RoleHeadR4Shenwei5', sizeStr: '256*256' }
 ];
 
+// ---- 成就覆盖层 ----
+let achievementOverlay = null;
+let achievementColor = '#cba186';
+let tintCache = { color: null, canvas: null };
+const OVERLAY_PRESETS = ['#cba186','#FFD700','#C0C0C0','#CD7F32','#E74C3C','#3498DB','#9B59B6','#27AE60','#FFFFFF','#000000'];
+
+const overlayImg = new Image();
+overlayImg.onload = () => { achievementOverlay = overlayImg; if (currentCategory === '成就') renderGrid(); };
+overlayImg.src = 'assets/achievement_overlay.png';
+
+function getTintedOverlay(color) {
+    if (tintCache.color === color && tintCache.canvas) return tintCache.canvas;
+    if (!achievementOverlay) return null;
+    const cv = document.createElement('canvas');
+    cv.width = achievementOverlay.naturalWidth || achievementOverlay.width;
+    cv.height = achievementOverlay.naturalHeight || achievementOverlay.height;
+    const ctx = cv.getContext('2d');
+    ctx.drawImage(achievementOverlay, 0, 0);
+    ctx.globalCompositeOperation = 'source-in';
+    ctx.fillStyle = color;
+    ctx.fillRect(0, 0, cv.width, cv.height);
+    tintCache = { color, canvas: cv };
+    return cv;
+}
+
+// ---- 数据初始化 ----
 let items = [];
 let categories = [];
 let currentCategory = '';
-let categoryData = {}; 
+let categoryData = {};
 
-// 初始化构建数据，引入唯一ID方便寻址
 rawData.forEach((d, index) => {
     let [w, h] = d.sizeStr.split('*').map(Number);
     let isSquare = (w === h);
@@ -211,7 +275,8 @@ rawData.forEach((d, index) => {
     }
     items.push({
         ...d, _id: index, w, h, isCircle: d.resource.includes('圆'), isSquare,
-        localCropData: isSquare ? null : {x:0, y:0, w:100, h:100} 
+        bg: d.bg || null,
+        localCropData: isSquare ? null : {x:0, y:0, w:100, h:100}
     });
 });
 
@@ -223,15 +288,91 @@ modalCropBox = document.getElementById('modalCropBox'), modalResize = document.g
 modalConfirm = document.getElementById('modalConfirm'), modalCancel = document.getElementById('modalCancel'),
 modalTitle = document.getElementById('modalTitle'), modalImgContainer = document.getElementById('modalImgContainer');
 
-// 模板组件
-const templateFileInput = document.getElementById('templateFileInput'),
-modalTemplateImg = document.getElementById('modalTemplateImg'),
+const modalTemplateImg = document.getElementById('modalTemplateImg'),
 templateOpacity = document.getElementById('templateOpacity'),
 clearTemplateBtn = document.getElementById('clearTemplateBtn');
 
+// ---- 参考图预置 ----
+let refImages = [];
+
+async function loadRefImages() {
+    try {
+        const resp = await fetch('api/reference-images');
+        refImages = await resp.json();
+        renderRefGallery();
+    } catch(e) { console.warn('加载参考图列表失败', e); }
+}
+
+function renderRefGallery() {
+    const gallery = document.getElementById('refGallery');
+    gallery.innerHTML = '';
+    if (refImages.length === 0) {
+        gallery.innerHTML = '<span style="font-size:12px;color:var(--text-light);">无可用参考图</span>';
+        return;
+    }
+    refImages.forEach(img => {
+        const thumb = document.createElement('img');
+        thumb.src = img.url;
+        thumb.className = 'ref-thumb';
+        thumb.title = img.name;
+        thumb.onclick = () => selectRefImage(img.url, thumb);
+        gallery.appendChild(thumb);
+    });
+}
+
+function selectRefImage(url, thumbEl) {
+    document.querySelectorAll('.ref-thumb').forEach(t => t.classList.remove('active'));
+    thumbEl.classList.add('active');
+    modalTemplateImg.src = url;
+    modalTemplateImg.style.display = 'block';
+    modalTemplateImg.style.opacity = templateOpacity.value;
+    clearTemplateBtn.style.display = 'inline-block';
+}
+
+templateOpacity.oninput = e => { modalTemplateImg.style.opacity = e.target.value; };
+
+clearTemplateBtn.onclick = () => {
+    modalTemplateImg.src = '';
+    modalTemplateImg.style.display = 'none';
+    document.querySelectorAll('.ref-thumb').forEach(t => t.classList.remove('active'));
+    clearTemplateBtn.style.display = 'none';
+};
+
+// ---- 成就覆盖层调色板 ----
+function initColorPalette() {
+    const palette = document.getElementById('colorPalette');
+    const picker = document.getElementById('overlayColorPicker');
+    OVERLAY_PRESETS.forEach(color => {
+        const swatch = document.createElement('div');
+        swatch.className = 'color-swatch' + (color === achievementColor ? ' active' : '');
+        swatch.style.background = color;
+        if (color === '#FFFFFF') swatch.style.border = '2px solid #ddd';
+        swatch.title = color;
+        swatch.onclick = () => {
+            achievementColor = color;
+            picker.value = color === '#FFFFFF' ? '#ffffff' : color;
+            tintCache = { color: null, canvas: null };
+            palette.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+            swatch.classList.add('active');
+            if (currentCategory === '成就') renderGrid();
+        };
+        palette.appendChild(swatch);
+    });
+    picker.value = achievementColor;
+    picker.oninput = e => {
+        achievementColor = e.target.value;
+        tintCache = { color: null, canvas: null };
+        palette.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+        if (currentCategory === '成就') renderGrid();
+    };
+}
+
+// ---- 页面初始化 ----
 window.onload = () => {
     renderTabs();
     switchTab(categories[0]);
+    loadRefImages();
+    initColorPalette();
 };
 
 tabFileInput.onchange = e => {
@@ -290,7 +431,7 @@ function updateToolbar() {
     const img = categoryData[currentCategory].img;
     if (img) {
         statusDot.classList.add('active');
-        statusText.innerText = `已就绪 (${img.width}x${img.height})`;
+        statusText.innerText = '已就绪 (' + img.width + 'x' + img.height + ')';
         statusThumb.src = img.src;
         statusThumb.style.display = 'block';
     } else {
@@ -298,6 +439,7 @@ function updateToolbar() {
         statusText.innerText = '当前页签未上传底图';
         statusThumb.style.display = 'none';
     }
+    document.getElementById('achievementTools').style.display = currentCategory === '成就' ? 'flex' : 'none';
 }
 
 function renderGrid() {
@@ -306,45 +448,42 @@ function renderGrid() {
     const hasImg = !!categoryData[currentCategory].img;
 
     if (!hasImg) {
-        grid.innerHTML = `
-            <div class="empty-state">
-                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-                <h3>当前分类暂无图源</h3>
-                <p style="margin-top:8px;font-size:14px">请点击上方按钮上传立绘底图</p>
-            </div>
-        `;
+        grid.innerHTML = '<div class="empty-state">' +
+            '<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>' +
+            '<h3>当前分类暂无图源</h3>' +
+            '<p style="margin-top:8px;font-size:14px">请点击上方按钮上传立绘底图</p>' +
+            '</div>';
         return;
     }
 
     currentItems.forEach(item => {
         const card = document.createElement('div');
-        card.className = `card ${!item.isSquare ? 'independent' : ''}`;
-        
-        const badgeHtml = !item.isSquare ? `<div class="badge">✨ 独立比例</div>` : '';
+        card.className = 'card' + (!item.isSquare ? ' independent' : '');
 
-        card.innerHTML = `
-            <div class="card-header">
-                <div><h3>${item.resource}</h3><p class="sub">${item.sizeStr} | ${item.isCircle?'圆形遮罩':'方形切图'}</p></div>
-                ${badgeHtml}
-            </div>
-            <div class="preview-wrap">
-                <div class="card-actions">
-                    <button class="action-btn edit-btn" title="编辑区域"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
-                    <button class="action-btn dl-btn" title="单独下载"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg></button>
-                </div>
-                <div class="preview"><canvas></canvas></div>
-            </div>
-            <div class="info-row"><span class="label">文件夹</span> <span class="val">${item.folder}</span></div>
-            <div class="info-row" style="margin-bottom:0;"><span class="label">文件名</span> 
-                <input type="text" class="name-input" value="${item.name}" title="点击修改打包输出的文件名">
-            </div>
-        `;
-        
-        // 绑定重命名事件
+        const badgeHtml = !item.isSquare ? '<div class="badge">独立比例</div>' : '';
+        const bgLabel = item.bg ? ' | 黑底' : '';
+
+        card.innerHTML =
+            '<div class="card-header">' +
+                '<div><h3>' + item.resource + '</h3><p class="sub">' + item.sizeStr + ' | ' + (item.isCircle ? '圆形遮罩' : '方形切图') + bgLabel + '</p></div>' +
+                badgeHtml +
+            '</div>' +
+            '<div class="preview-wrap">' +
+                '<div class="card-actions">' +
+                    '<button class="action-btn edit-btn" title="编辑区域"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>' +
+                    '<button class="action-btn dl-btn" title="单独下载"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg></button>' +
+                '</div>' +
+                '<div class="preview"><canvas></canvas></div>' +
+            '</div>' +
+            '<div class="info-row"><span class="label">文件夹</span> <span class="val">' + item.folder + '</span></div>' +
+            '<div class="info-row" style="margin-bottom:0;"><span class="label">文件名</span> ' +
+                '<input type="text" class="name-input" value="' + item.name + '" title="点击修改打包输出的文件名">' +
+            '</div>';
+
         card.querySelector('.name-input').onchange = (e) => {
             const newVal = e.target.value.trim();
             if(newVal) item.name = newVal;
-            else e.target.value = item.name; // 恢复
+            else e.target.value = item.name;
         };
 
         const cv = card.querySelector('canvas');
@@ -354,20 +493,18 @@ function renderGrid() {
         else { displayH = maxDisplaySize; displayW = maxDisplaySize * (item.w/item.h); }
         cv.width = item.w; cv.height = item.h;
         cv.style.width = displayW + 'px'; cv.style.height = displayH + 'px';
-        
+
         drawCanvas(cv, item, categoryData[currentCategory].img);
-        
+
         card.querySelector('.edit-btn').onclick = () => openModal(item);
         card.querySelector('.dl-btn').onclick = () => exportSingle(item);
         grid.appendChild(card);
     });
 }
 
-// 需求1核心逻辑：防锯齿与分步降采样 (Step-down Scaling) 算法
-// 安全提取裁切区域（支持选框超出图片边界的情况）
+// ---- 渲染核心：防锯齿与分步降采样 ----
 function extractCropRegion(sourceImg, crop) {
     const cw = Math.ceil(crop.w), ch = Math.ceil(crop.h);
-    // 浏览器 canvas 面积上限约 2.68 亿像素，超限时先缩到安全范围
     const MAX_AREA = 268435456;
     let safeW = cw, safeH = ch;
     if (safeW * safeH > MAX_AREA) {
@@ -380,7 +517,6 @@ function extractCropRegion(sourceImg, crop) {
     const offCtx = off.getContext('2d');
     offCtx.imageSmoothingEnabled = true;
     offCtx.imageSmoothingQuality = 'high';
-    // 计算源图与裁切框的交集，只绘制有效像素（支持选框超出图片外部）
     const sx = Math.max(0, crop.x), sy = Math.max(0, crop.y);
     const sx2 = Math.min(sourceImg.naturalWidth || sourceImg.width, crop.x + crop.w);
     const sy2 = Math.min(sourceImg.naturalHeight || sourceImg.height, crop.y + crop.h);
@@ -410,10 +546,15 @@ function drawCanvas(canvas, item, sourceImg) {
         ctx.clip();
     }
 
-    // 精确提取裁切区域
+    // 背景填充（如黑底项）
+    if (item.bg) {
+        ctx.fillStyle = item.bg;
+        ctx.fillRect(0, 0, item.w, item.h);
+    }
+
     let { canvas: srcCanvas, w: curW, h: curH } = extractCropRegion(sourceImg, crop);
 
-    // 阶梯降采样：每步缩小一半，直到接近目标尺寸，防止大比例缩放产生锯齿
+    // 阶梯降采样
     while (curW > item.w * 2 || curH > item.h * 2) {
         let nextW = Math.max(Math.ceil(curW * 0.5), item.w);
         let nextH = Math.max(Math.ceil(curH * 0.5), item.h);
@@ -426,17 +567,23 @@ function drawCanvas(canvas, item, sourceImg) {
         srcCanvas = tempCanvas;
         curW = nextW; curH = nextH;
     }
-    // 最终缩放到目标尺寸
     ctx.drawImage(srcCanvas, 0, 0, curW, curH, 0, 0, item.w, item.h);
+
+    // 成就覆盖层（在裁剪之上、圆形遮罩之内）
+    if (item.category === '成就' && achievementOverlay) {
+        const tinted = getTintedOverlay(achievementColor);
+        if (tinted) ctx.drawImage(tinted, 0, 0, tinted.width, tinted.height, 0, 0, item.w, item.h);
+    }
+
     ctx.restore();
 }
 
-// ---- 模态框交互逻辑 ----
+// ---- 模态框交互 ----
 let activeItem = null;
 let isDragging = false, isResizing = false;
 let startMouseX, startMouseY, startCrop;
 let tempCrop = {x:0, y:0, w:0, h:0};
-let visualRatio = 1; // 需求3：视觉换算比率
+let visualRatio = 1;
 
 function updateVisualRatio() {
     if (!modal.classList.contains('active') || !modalImg.naturalWidth) return;
@@ -444,7 +591,6 @@ function updateVisualRatio() {
     updateCropBoxDOM();
 }
 
-// 监听窗口尺寸变化重新自适应
 window.addEventListener('resize', () => {
     if (modal.classList.contains('active')) fitModalImage();
 });
@@ -455,14 +601,11 @@ function fitModalImage() {
     const availW = wrapRect.width - 40;
     const availH = wrapRect.height - 40;
     const natW = modalImg.naturalWidth, natH = modalImg.naturalHeight;
-    if (!natW || !natH) return;
-    let dispW = natW, dispH = natH;
-    // 如果原图尺寸超出可用区域，按比例缩小自适应
-    if (dispW > availW || dispH > availH) {
-        const ratio = Math.min(availW / dispW, availH / dispH);
-        dispW = Math.floor(dispW * ratio);
-        dispH = Math.floor(dispH * ratio);
-    }
+    if (!natW || !natH || availW <= 0 || availH <= 0) return;
+    // 始终自适应：确保图片完整显示，不超出可视区域
+    const ratio = Math.min(availW / natW, availH / natH, 1);
+    const dispW = Math.floor(natW * ratio);
+    const dispH = Math.floor(natH * ratio);
     modalImgContainer.style.width = dispW + 'px';
     modalImgContainer.style.height = dispH + 'px';
     updateVisualRatio();
@@ -471,24 +614,28 @@ function fitModalImage() {
 function openModal(item) {
     activeItem = item;
     const isGlobal = item.isSquare;
-    modalTitle.innerHTML = isGlobal ? `编辑：${item.category} 共享选区 (1:1)` : `编辑：${item.resource} 独立选区 (${item.sizeStr})`;
-    modalConfirm.innerText = isGlobal ? "保存共享选区 (应用至当前分类)" : "保存独立选区";
+    modalTitle.innerHTML = isGlobal
+        ? '编辑：' + item.category + ' 共享选区 (1:1)'
+        : '编辑：' + item.resource + ' 独立选区 (' + item.sizeStr + ')';
+    modalConfirm.innerText = isGlobal ? '保存共享选区 (应用至当前分类)' : '保存独立选区';
 
     const sourceCrop = isGlobal ? categoryData[item.category].sharedCrop : item.localCropData;
     tempCrop = { ...sourceCrop };
 
     modal.classList.add('active');
-    const srcImg = categoryData[item.category].img;
-    if (modalImg.src === srcImg.src && modalImg.naturalWidth) {
-        fitModalImage();
-    } else {
-        modalImg.onload = () => fitModalImage();
-        modalImg.src = srcImg.src;
-    }
+    // rAF 确保模态框布局完成后再测量尺寸
+    requestAnimationFrame(() => {
+        const srcImg = categoryData[item.category].img;
+        if (modalImg.src === srcImg.src && modalImg.naturalWidth) {
+            fitModalImage();
+        } else {
+            modalImg.onload = () => fitModalImage();
+            modalImg.src = srcImg.src;
+        }
+    });
 }
 
 function updateCropBoxDOM() {
-    // 渲染时乘以视觉缩放比
     modalCropBox.style.left = (tempCrop.x * visualRatio) + 'px';
     modalCropBox.style.top = (tempCrop.y * visualRatio) + 'px';
     modalCropBox.style.width = (tempCrop.w * visualRatio) + 'px';
@@ -506,11 +653,8 @@ modalCropBox.onmousedown = e => {
 
 window.onmousemove = e => {
     if(!isDragging && !isResizing) return;
-    
-    // 获取拖动偏移量并除以视觉缩放比还原真实像素
     const dx = (e.clientX - startMouseX) / visualRatio;
     const dy = (e.clientY - startMouseY) / visualRatio;
-    
     if (isDragging) {
         tempCrop.x = startCrop.x + dx;
         tempCrop.y = startCrop.y + dy;
@@ -535,30 +679,6 @@ modalConfirm.onclick = () => {
 };
 modalCancel.onclick = () => modal.classList.remove('active');
 
-// ---- 需求4：模板图交互逻辑 ----
-templateFileInput.onchange = e => {
-    if(e.target.files[0]) {
-        const reader = new FileReader();
-        reader.onload = ev => {
-            modalTemplateImg.src = ev.target.result;
-            modalTemplateImg.style.display = 'block';
-            clearTemplateBtn.style.display = 'inline-block';
-        };
-        reader.readAsDataURL(e.target.files[0]);
-    }
-};
-
-templateOpacity.oninput = e => {
-    modalTemplateImg.style.opacity = e.target.value;
-};
-
-clearTemplateBtn.onclick = () => {
-    modalTemplateImg.src = '';
-    modalTemplateImg.style.display = 'none';
-    templateFileInput.value = '';
-    clearTemplateBtn.style.display = 'none';
-};
-
 // ---- 单图及 ZIP 导出 ----
 async function exportSingle(item) {
     const cv = document.createElement('canvas');
@@ -567,13 +687,13 @@ async function exportSingle(item) {
     const blob = await new Promise(r => cv.toBlob(r));
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `${item.name}.png`;
+    a.download = item.name + '.png';
     a.click();
 }
 
 async function exportZip(itemsToExport, zipName) {
     itemsToExport = itemsToExport.filter(i => !!categoryData[i.category].img);
-    if(itemsToExport.length === 0) return alert("选中的分类没有底图数据，无法打包！");
+    if(itemsToExport.length === 0) return alert('选中的分类没有底图数据，无法打包！');
 
     const zip = new JSZip();
     document.body.style.cursor = 'wait';
@@ -594,11 +714,12 @@ async function exportZip(itemsToExport, zipName) {
     document.body.style.cursor = 'default';
 }
 
-document.getElementById('btnExportCategory').onclick = () => exportZip(items.filter(i => i.category === currentCategory), `神威_${currentCategory}_${Date.now()}`);
-document.getElementById('btnExportAll').onclick = () => exportZip(items, `神威_全量资源_${Date.now()}`);
+document.getElementById('btnExportCategory').onclick = () => exportZip(items.filter(i => i.category === currentCategory), '神威_' + currentCategory + '_' + Date.now());
+document.getElementById('btnExportAll').onclick = () => exportZip(items, '神威_全量资源_' + Date.now());
 </script>
 </body>
 </html>""".replace("{{TOOL_NAME}}", TOOL_NAME)
+
 
 if __name__ == "__main__":
     import uvicorn
