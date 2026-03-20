@@ -34,11 +34,15 @@ h1{font-size:22px;color:var(--text-main);display:flex;align-items:center;gap:8px
 .btn-outline:hover{color:var(--primary);border-color:var(--primary);background:#fff3eb}
 
 .workspace{background:var(--card-bg);padding:24px;border-radius:16px;box-shadow:0 2px 12px rgba(0,0,0,.04);min-height:70vh}
-.toolbar{display:flex;justify-content:space-between;align-items:center;background:#fafbfc;padding:16px 20px;border-radius:12px;margin-bottom:24px;border:1px solid var(--border);flex-wrap:wrap;gap:12px}
-.status{display:flex;align-items:center;gap:12px;font-size:14px;color:var(--text-sub)}
-.status-dot{width:10px;height:10px;border-radius:50%;background:#ccc}
-.status-dot.active{background:#52c41a;box-shadow:0 0 0 3px rgba(82,196,26,.2)}
-.thumb{width:40px;height:40px;border-radius:6px;object-fit:cover;border:1px solid var(--border);background:#eee}
+.slot-section{margin-bottom:28px}
+.slot-section:last-child{margin-bottom:0}
+.slot-header{display:flex;justify-content:space-between;align-items:center;background:#fafbfc;padding:14px 20px;border-radius:12px;margin-bottom:16px;border:1px solid var(--border);flex-wrap:wrap;gap:10px}
+.slot-info{display:flex;align-items:center;gap:12px}
+.slot-label{font-size:16px;font-weight:700;color:var(--text-main)}
+.slot-dot{width:8px;height:8px;border-radius:50%;background:#ccc;flex-shrink:0}
+.slot-dot.active{background:#52c41a;box-shadow:0 0 0 3px rgba(82,196,26,.2)}
+.slot-thumb{width:36px;height:36px;border-radius:6px;object-fit:cover;border:1px solid var(--border);background:#eee}
+.slot-status{font-size:13px;color:var(--text-light)}
 
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px}
 .card{background:#fff;padding:20px;border-radius:16px;border:1px solid var(--border);display:flex;flex-direction:column;position:relative;transition:all .3s}
@@ -59,8 +63,8 @@ h1{font-size:22px;color:var(--text-main);display:flex;align-items:center;gap:8px
 .name-input{border:1px dashed var(--border);background:#fafbfc;font-family:monospace;font-size:13px;text-align:right;width:100%;color:var(--text-main);transition:all .2s;padding:2px 20px 2px 4px;border-radius:4px;outline:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'%3E%3Cpath d='M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7'/%3E%3Cpath d='M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 4px center}
 .name-input:hover,.name-input:focus{border-color:var(--primary);border-style:solid;background-color:#fff;box-shadow:0 0 0 2px rgba(203,161,134,.15)}
 
-.empty-state{grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text-light);background:#fafbfc;border-radius:12px;border:2px dashed var(--border)}
-.empty-state svg{margin-bottom:16px;opacity:.5}
+.empty-state{grid-column:1/-1;text-align:center;padding:40px 20px;color:var(--text-light);background:#fafbfc;border-radius:12px;border:2px dashed var(--border)}
+.empty-state svg{margin-bottom:12px;opacity:.5}
 
 .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:1000;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
 .modal.active{display:flex}
@@ -96,21 +100,13 @@ h1{font-size:22px;color:var(--text-main);display:flex;align-items:center;gap:8px
 </div>
 
 <div class="workspace">
-    <div class="toolbar">
-        <div class="status" id="statusArea">
-            <div class="status-dot" id="statusDot"></div>
-            <img class="thumb" id="statusThumb" src="" style="display:none">
-            <span id="statusText">请上传立绘原图</span>
-        </div>
-        <button class="btn-primary" onclick="document.getElementById('fileInput').click()">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-            上传/更换立绘
-        </button>
-        <input type="file" id="fileInput" accept="image/*" style="display:none">
-    </div>
-    <div class="grid" id="grid"></div>
+    <div class="slot-section" id="slot0"></div>
+    <div class="slot-section" id="slot1"></div>
+    <div class="slot-section" id="slot2"></div>
 </div>
 </div>
+
+<input type="file" id="fileInput" accept="image/*" style="display:none">
 
 <div class="modal" id="modal">
 <div class="modal-content">
@@ -145,142 +141,153 @@ const ITEMS = [
     { id: 'closeup128', label: '缩放特写', w: 128,  h: 128,  folder: 'IconToolsSp',    cropKey: 'closeup',    ratio: 146/205, isDownsample: true }
 ];
 
-let sourceImg = null;
-let baseName = '';
-let cropData = {
-    fullBody:   { x: 0, y: 0, w: 100, h: 100 },
-    wideBanner: { x: 0, y: 0, w: 100, h: 100 },
-    closeup:    { x: 0, y: 0, w: 100, h: 100 }
-};
-let itemNames = {};
+const SLOT_COUNT = 3;
+const slots = [];
+for (let i = 0; i < SLOT_COUNT; i++) {
+    slots.push({
+        img: null, baseName: '',
+        cropData: {
+            fullBody:   { x: 0, y: 0, w: 100, h: 100 },
+            wideBanner: { x: 0, y: 0, w: 100, h: 100 },
+            closeup:    { x: 0, y: 0, w: 100, h: 100 }
+        },
+        names: { fullBody: '', wideBanner: '', closeup256: '', closeup128: '' }
+    });
+}
 
-const grid = document.getElementById('grid'),
-statusDot = document.getElementById('statusDot'), statusText = document.getElementById('statusText'),
-statusThumb = document.getElementById('statusThumb'), fileInput = document.getElementById('fileInput'),
+const fileInput = document.getElementById('fileInput'),
 modal = document.getElementById('modal'), modalImg = document.getElementById('modalImg'),
 modalCropBox = document.getElementById('modalCropBox'), modalResize = document.getElementById('modalResize'),
 modalConfirm = document.getElementById('modalConfirm'), modalCancel = document.getElementById('modalCancel'),
 modalTitle = document.getElementById('modalTitle'), modalImgContainer = document.getElementById('modalImgContainer');
 
-// ---- 初始化 ----
-window.onload = () => renderGrid();
+let uploadingSlotIdx = -1;
+
+window.onload = () => { for (let i = 0; i < SLOT_COUNT; i++) renderSlot(i); };
+
+// ---- 上传 ----
+function triggerUpload(idx) { uploadingSlotIdx = idx; fileInput.click(); }
 
 fileInput.onchange = e => {
-    if (!e.target.files[0]) return;
+    if (!e.target.files[0] || uploadingSlotIdx < 0) return;
+    const idx = uploadingSlotIdx;
     const file = e.target.files[0];
-    baseName = file.name.replace(/\\.[^.]+$/, '');
-    setItemNames(baseName);
+    const base = file.name.replace(/\\.[^.]+$/, '');
+    slots[idx].baseName = base;
+    setSlotNames(idx, base);
     const reader = new FileReader();
     reader.onload = ev => {
         const img = new Image();
-        img.onload = () => {
-            sourceImg = img;
-            initCrops(img);
-            updateToolbar();
-            renderGrid();
-        };
+        img.onload = () => { slots[idx].img = img; initCrops(idx); renderSlot(idx); };
         img.src = ev.target.result;
     };
     reader.readAsDataURL(file);
     fileInput.value = '';
 };
 
-function setItemNames(base) {
-    itemNames.fullBody = base;
-    itemNames.wideBanner = base + 'Bag';
-    itemNames.closeup256 = base;
-    itemNames.closeup128 = base + 'Sp';
+function setSlotNames(idx, base) {
+    const n = slots[idx].names;
+    n.fullBody = base;
+    n.wideBanner = base + 'Bag';
+    n.closeup256 = base;
+    n.closeup128 = base + 'Sp';
 }
 
-function initCrops(img) {
-    // 完整立绘: 尽量大，居中
-    let fbR = 1140 / 1440;
-    let fbH = img.height * 0.9, fbW = fbH * fbR;
+function initCrops(idx) {
+    const img = slots[idx].img, cd = slots[idx].cropData;
+    let fbR = 1140/1440, fbH = img.height * 0.9, fbW = fbH * fbR;
     if (fbW > img.width * 0.9) { fbW = img.width * 0.9; fbH = fbW / fbR; }
-    cropData.fullBody = { x: (img.width - fbW) / 2, y: (img.height - fbH) / 2, w: fbW, h: fbH };
+    cd.fullBody = { x: (img.width - fbW) / 2, y: (img.height - fbH) / 2, w: fbW, h: fbH };
 
-    // 宽版头像: 横向偏上
-    let wbR = 504 / 225;
-    let wbW = img.width * 0.8, wbH = wbW / wbR;
+    let wbR = 504/225, wbW = img.width * 0.8, wbH = wbW / wbR;
     if (wbH > img.height * 0.4) { wbH = img.height * 0.4; wbW = wbH * wbR; }
-    cropData.wideBanner = { x: (img.width - wbW) / 2, y: img.height * 0.05, w: wbW, h: wbH };
+    cd.wideBanner = { x: (img.width - wbW) / 2, y: img.height * 0.05, w: wbW, h: wbH };
 
-    // 特写: 头部区域
-    let cuR = 146 / 205;
-    let cuH = img.height * 0.35, cuW = cuH * cuR;
+    let cuR = 146/205, cuH = img.height * 0.35, cuW = cuH * cuR;
     if (cuW > img.width * 0.6) { cuW = img.width * 0.6; cuH = cuW / cuR; }
-    cropData.closeup = { x: (img.width - cuW) / 2, y: img.height * 0.02, w: cuW, h: cuH };
+    cd.closeup = { x: (img.width - cuW) / 2, y: img.height * 0.02, w: cuW, h: cuH };
 }
 
-function updateToolbar() {
-    if (sourceImg) {
-        statusDot.classList.add('active');
-        statusText.innerText = '已就绪 (' + sourceImg.width + 'x' + sourceImg.height + ') - ' + baseName;
-        statusThumb.src = sourceImg.src;
-        statusThumb.style.display = 'block';
+// ---- 槽位渲染 ----
+function renderSlot(idx) {
+    const slot = slots[idx];
+    const section = document.getElementById('slot' + idx);
+    section.innerHTML = '';
+
+    // 槽位标题栏
+    const hdr = document.createElement('div');
+    hdr.className = 'slot-header';
+    let infoHtml = '<div class="slot-info"><div class="slot-dot' + (slot.img ? ' active' : '') + '"></div>' +
+        '<span class="slot-label">立绘 ' + (idx + 1) + '</span>';
+    if (slot.img) {
+        infoHtml += '<img class="slot-thumb" src="' + slot.img.src + '">' +
+            '<span class="slot-status">' + slot.img.width + 'x' + slot.img.height + ' - ' + slot.baseName + '</span>';
     } else {
-        statusDot.classList.remove('active');
-        statusText.innerText = '请上传立绘原图';
-        statusThumb.style.display = 'none';
+        infoHtml += '<span class="slot-status">未上传</span>';
     }
+    infoHtml += '</div>';
+    hdr.innerHTML = infoHtml;
+    const btn = document.createElement('button');
+    btn.className = 'btn-primary';
+    btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg> 上传/更换';
+    btn.onclick = () => triggerUpload(idx);
+    hdr.appendChild(btn);
+    section.appendChild(hdr);
+
+    // 网格
+    const gridEl = document.createElement('div');
+    gridEl.className = 'grid';
+    if (!slot.img) {
+        gridEl.innerHTML = '<div class="empty-state">' +
+            '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>' +
+            '<p>点击上方按钮上传立绘原图</p></div>';
+    } else {
+        ITEMS.forEach(item => gridEl.appendChild(buildCard(idx, item)));
+    }
+    section.appendChild(gridEl);
 }
 
-// ---- 网格渲染 ----
-function renderGrid() {
-    grid.innerHTML = '';
-    if (!sourceImg) {
-        grid.innerHTML = '<div class="empty-state">' +
-            '<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>' +
-            '<h3>暂无立绘素材</h3>' +
-            '<p style="margin-top:8px;font-size:14px">请点击上方按钮上传原始立绘图</p>' +
-            '</div>';
-        return;
-    }
+function buildCard(slotIdx, item) {
+    const slot = slots[slotIdx];
+    const card = document.createElement('div');
+    card.className = 'card';
+    const syncBadge = (item.cropKey === 'closeup') ? '<div class="badge">Sync</div>' : '';
+    const strokeLabel = item.hasStroke ? ' | 4px描边' : '';
 
-    ITEMS.forEach(item => {
-        const card = document.createElement('div');
-        card.className = 'card';
-
-        const syncBadge = (item.cropKey === 'closeup') ? '<div class="badge">Sync</div>' : '';
-        const strokeLabel = item.hasStroke ? ' | 4px描边' : '';
-
-        card.innerHTML =
-            '<div class="card-header">' +
-                '<div><h3>' + item.label + '</h3><p class="sub">' + item.w + 'x' + item.h + strokeLabel + '</p></div>' +
-                syncBadge +
+    card.innerHTML =
+        '<div class="card-header">' +
+            '<div><h3>' + item.label + '</h3><p class="sub">' + item.w + 'x' + item.h + strokeLabel + '</p></div>' +
+            syncBadge +
+        '</div>' +
+        '<div class="preview-wrap">' +
+            '<div class="card-actions">' +
+                '<button class="action-btn edit-btn" title="编辑区域"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>' +
+                '<button class="action-btn dl-btn" title="单独下载"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg></button>' +
             '</div>' +
-            '<div class="preview-wrap">' +
-                '<div class="card-actions">' +
-                    '<button class="action-btn edit-btn" title="编辑区域"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>' +
-                    '<button class="action-btn dl-btn" title="单独下载"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg></button>' +
-                '</div>' +
-                '<div class="preview"><canvas></canvas></div>' +
-            '</div>' +
-            '<div class="info-row"><span class="label">文件夹</span> <span class="val">' + item.folder + '</span></div>' +
-            '<div class="info-row"><span class="label">文件名</span> ' +
-                '<input type="text" class="name-input" value="' + (itemNames[item.id] || '') + '" title="点击修改打包输出的文件名">' +
-            '</div>';
+            '<div class="preview"><canvas></canvas></div>' +
+        '</div>' +
+        '<div class="info-row"><span class="label">文件夹</span> <span class="val">' + item.folder + '</span></div>' +
+        '<div class="info-row"><span class="label">文件名</span> ' +
+            '<input type="text" class="name-input" value="' + (slot.names[item.id] || '') + '" title="点击修改打包输出的文件名">' +
+        '</div>';
 
-        card.querySelector('.name-input').onchange = (e) => {
-            const v = e.target.value.trim();
-            if (v) itemNames[item.id] = v;
-            else e.target.value = itemNames[item.id];
-        };
+    card.querySelector('.name-input').onchange = e => {
+        const v = e.target.value.trim();
+        if (v) slot.names[item.id] = v; else e.target.value = slot.names[item.id];
+    };
 
-        const cv = card.querySelector('canvas');
-        const maxDisplay = 260;
-        let dW, dH;
-        if (item.w > item.h) { dW = maxDisplay; dH = maxDisplay * (item.h / item.w); }
-        else { dH = maxDisplay; dW = maxDisplay * (item.w / item.h); }
-        cv.width = item.w; cv.height = item.h;
-        cv.style.width = dW + 'px'; cv.style.height = dH + 'px';
+    const cv = card.querySelector('canvas');
+    const maxD = 260;
+    let dW, dH;
+    if (item.w > item.h) { dW = maxD; dH = maxD * (item.h / item.w); }
+    else { dH = maxD; dW = maxD * (item.w / item.h); }
+    cv.width = item.w; cv.height = item.h;
+    cv.style.width = dW + 'px'; cv.style.height = dH + 'px';
+    drawCanvas(cv, item, slot.img, slot.cropData);
 
-        drawCanvas(cv, item, sourceImg);
-
-        card.querySelector('.edit-btn').onclick = () => openModal(item);
-        card.querySelector('.dl-btn').onclick = () => exportSingle(item);
-        grid.appendChild(card);
-    });
+    card.querySelector('.edit-btn').onclick = () => openModal(slotIdx, item);
+    card.querySelector('.dl-btn').onclick = () => exportSingle(slotIdx, item);
+    return card;
 }
 
 // ---- 渲染核心 ----
@@ -305,8 +312,7 @@ function extractCropRegion(src, crop) {
 
 function stepDown(srcCv, curW, curH, tW, tH) {
     while (curW > tW * 2 || curH > tH * 2) {
-        let nW = Math.max(Math.ceil(curW * 0.5), tW);
-        let nH = Math.max(Math.ceil(curH * 0.5), tH);
+        let nW = Math.max(Math.ceil(curW * 0.5), tW), nH = Math.max(Math.ceil(curH * 0.5), tH);
         let t = document.createElement('canvas'); t.width = nW; t.height = nH;
         let tc = t.getContext('2d'); tc.imageSmoothingEnabled = true; tc.imageSmoothingQuality = 'high';
         tc.drawImage(srcCv, 0, 0, curW, curH, 0, 0, nW, nH);
@@ -315,23 +321,21 @@ function stepDown(srcCv, curW, curH, tW, tH) {
     return { canvas: srcCv, w: curW, h: curH };
 }
 
-function drawCanvas(canvas, item, src) {
+function drawCanvas(canvas, item, src, cd) {
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, item.w, item.h);
     if (!src) return;
     ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
-    const crop = cropData[item.cropKey];
+    const crop = cd[item.cropKey];
 
-    // 缩放特写：渲染256再降采样
     if (item.isDownsample) {
         const tmp = document.createElement('canvas'); tmp.width = 256; tmp.height = 256;
         const ref = ITEMS.find(i => i.id === 'closeup256');
-        drawCanvas(tmp, ref, src);
+        drawCanvas(tmp, ref, src, cd);
         ctx.drawImage(tmp, 0, 0, 256, 256, 0, 0, 128, 128);
         return;
     }
 
-    // 描边特写：146x205容器 + 4px内侧描边
     if (item.hasStroke) {
         const cW = 146, cH = 205, cX = 55, cY = 25.5, sw = 4;
         let { canvas: sc, w: cw, h: ch } = extractCropRegion(src, crop);
@@ -345,14 +349,13 @@ function drawCanvas(canvas, item, src) {
         return;
     }
 
-    // 标准渲染
     let { canvas: sc, w: cw, h: ch } = extractCropRegion(src, crop);
     ({ canvas: sc, w: cw, h: ch } = stepDown(sc, cw, ch, item.w, item.h));
     ctx.drawImage(sc, 0, 0, cw, ch, 0, 0, item.w, item.h);
 }
 
 // ---- 模态框 ----
-let activeItem = null;
+let activeSlotIdx = -1, activeItem = null;
 let isDragging = false, isResizing = false;
 let startMouseX, startMouseY, startCrop;
 let tempCrop = { x: 0, y: 0, w: 0, h: 0 };
@@ -378,15 +381,16 @@ function fitModalImage() {
     updateVisualRatio();
 }
 
-function openModal(item) {
-    activeItem = item;
-    modalTitle.innerHTML = '编辑：' + item.label + ' (' + item.w + 'x' + item.h + ')';
+function openModal(slotIdx, item) {
+    activeSlotIdx = slotIdx; activeItem = item;
+    const slot = slots[slotIdx];
+    modalTitle.innerHTML = '立绘 ' + (slotIdx + 1) + ' - ' + item.label + ' (' + item.w + 'x' + item.h + ')';
     modalConfirm.innerText = item.cropKey === 'closeup' ? '保存选区 (同步描边/缩放特写)' : '保存选区';
-    tempCrop = { ...cropData[item.cropKey] };
+    tempCrop = { ...slot.cropData[item.cropKey] };
     modal.classList.add('active');
     requestAnimationFrame(() => {
-        if (modalImg.src === sourceImg.src && modalImg.naturalWidth) fitModalImage();
-        else { modalImg.onload = () => fitModalImage(); modalImg.src = sourceImg.src; }
+        if (modalImg.src === slot.img.src && modalImg.naturalWidth) fitModalImage();
+        else { modalImg.onload = () => fitModalImage(); modalImg.src = slot.img.src; }
     });
 }
 
@@ -419,37 +423,43 @@ window.onmousemove = e => {
 window.onmouseup = () => { isDragging = false; isResizing = false; };
 
 modalConfirm.onclick = () => {
-    cropData[activeItem.cropKey] = { ...tempCrop };
+    slots[activeSlotIdx].cropData[activeItem.cropKey] = { ...tempCrop };
     modal.classList.remove('active');
-    renderGrid();
+    renderSlot(activeSlotIdx);
 };
 modalCancel.onclick = () => modal.classList.remove('active');
 
 // ---- 导出 ----
-async function exportSingle(item) {
+async function exportSingle(slotIdx, item) {
+    const slot = slots[slotIdx];
     const cv = document.createElement('canvas'); cv.width = item.w; cv.height = item.h;
-    drawCanvas(cv, item, sourceImg);
+    drawCanvas(cv, item, slot.img, slot.cropData);
     const blob = await new Promise(r => cv.toBlob(r));
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = (itemNames[item.id] || item.label) + '.png';
+    a.download = (slot.names[item.id] || item.label) + '.png';
     a.click();
 }
 
 async function exportAll() {
-    if (!sourceImg) return alert('请先上传立绘！');
+    const hasAny = slots.some(s => s.img);
+    if (!hasAny) return alert('请先上传至少一张立绘！');
     const zip = new JSZip();
     document.body.style.cursor = 'wait';
-    for (const item of ITEMS) {
-        const cv = document.createElement('canvas'); cv.width = item.w; cv.height = item.h;
-        drawCanvas(cv, item, sourceImg);
-        const blob = await new Promise(r => cv.toBlob(r));
-        zip.folder(item.folder).file((itemNames[item.id] || item.label) + '.png', blob);
+    for (let i = 0; i < SLOT_COUNT; i++) {
+        const slot = slots[i];
+        if (!slot.img) continue;
+        for (const item of ITEMS) {
+            const cv = document.createElement('canvas'); cv.width = item.w; cv.height = item.h;
+            drawCanvas(cv, item, slot.img, slot.cropData);
+            const blob = await new Promise(r => cv.toBlob(r));
+            zip.folder(item.folder).file((slot.names[item.id] || item.label) + '.png', blob);
+        }
     }
     const content = await zip.generateAsync({ type: 'blob' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(content);
-    a.download = '意识_' + baseName + '_' + Date.now() + '.zip';
+    a.download = '意识_全量资源_' + Date.now() + '.zip';
     a.click();
     document.body.style.cursor = 'default';
 }
