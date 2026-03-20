@@ -23,5 +23,12 @@
     "route_slug": "avatar_crop_tool",
     "created_at": "2026-03-03 20:31",
     "auto_start": true
+  },
+  "yishi_crop_tool": {
+    "display_name": "意识切图工具",
+    "path": "E:\\Such_Proj\\Other\\VibeHub\\projects\\yishi_crop_tool\\main.py",
+    "route_slug": "yishi_crop_tool",
+    "created_at": "2026-03-20 21:30",
+    "auto_start": true
   }
 }
