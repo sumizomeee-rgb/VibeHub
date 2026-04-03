@@ -566,6 +566,12 @@ function drawCanvas(canvas, item, sourceImg) {
         ctx.fillRect(0, 0, item.w, item.h);
     }
 
+    // 成就覆盖层（黑底之上、用户图之下）
+    if (item.category === '成就' && achievementOverlay) {
+        const tinted = getTintedOverlay(achievementColor);
+        if (tinted) ctx.drawImage(tinted, 0, 0, tinted.width, tinted.height, 0, 0, item.w, item.h);
+    }
+
     let { canvas: srcCanvas, w: curW, h: curH } = extractCropRegion(sourceImg, crop);
 
     // 阶梯降采样
@@ -582,12 +588,6 @@ function drawCanvas(canvas, item, sourceImg) {
         curW = nextW; curH = nextH;
     }
     ctx.drawImage(srcCanvas, 0, 0, curW, curH, 0, 0, item.w, item.h);
-
-    // 成就覆盖层（在裁剪之上、圆形遮罩之内）
-    if (item.category === '成就' && achievementOverlay) {
-        const tinted = getTintedOverlay(achievementColor);
-        if (tinted) ctx.drawImage(tinted, 0, 0, tinted.width, tinted.height, 0, 0, item.w, item.h);
-    }
 
     ctx.restore();
 }
