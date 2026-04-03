@@ -95,7 +95,7 @@ h1{font-size:22px;color:var(--text-main);display:flex;align-items:center;gap:8px
 .modal-tips{font-size:13px;color:var(--primary);background:#fff3eb;padding:6px 12px;border-radius:6px;margin-top:8px;display:inline-block;}
 .modal-template-tools{display:flex;gap:12px;align-items:center;background:#fafbfc;padding:8px 16px;border-radius:8px;border:1px solid var(--border);flex-wrap:wrap;}
 .modal-canvas-wrap{flex:1;min-height:0;position:relative;user-select:none;overflow:hidden;border-radius:8px;background:repeating-conic-gradient(#f4f4f4 0 25%,#fff 0 50%) 0 0/16px 16px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;padding:20px}
-.modal-img-container{position:relative;display:inline-block;box-shadow:0 0 20px rgba(0,0,0,.1)}
+.modal-img-container{position:relative;display:inline-block;box-shadow:0 0 20px rgba(0,0,0,.1);overflow:hidden}
 .modal-img-container img{display:block;width:100%;height:100%;opacity:0.8}
 .modal-crop-box{position:absolute;outline:2px solid var(--primary);cursor:move;box-shadow:0 0 0 9999px rgba(0,0,0,.5)}
 .modal-grid{position:absolute;inset:0;pointer-events:none;border:1px solid rgba(255,255,255,.3);z-index:10;}
@@ -234,9 +234,9 @@ const rawData = [
     { category: '高阶解放涂装', resource: '基础涂装-小', folder: 'IconToolsSp', name: 'Clo10610040103Sp', sizeStr: '128*128' },
     { category: '伴生特效涂装', resource: '伴生涂装-大', folder: 'IconTools', name: 'Clo10610049011', sizeStr: '256*256' },
     { category: '伴生特效涂装', resource: '伴生涂装-小', folder: 'IconToolsSp', name: 'Clo10610049011', sizeStr: '128*128' },
-    { category: '伴生特效涂装', resource: '伴生特效皮头像方-大', folder: 'RoleCharacter', name: 'RoleHeadR4Shenwei5', sizeStr: '800*800' },
-    { category: '伴生特效涂装', resource: '伴生特效皮头像方-小', folder: 'Role', name: 'RoleHeadR4Shenwei5', sizeStr: '140*140' },
-    { category: '伴生特效涂装', resource: '伴生特效皮战队头像-圆', folder: 'RolePlayerSp', name: 'RoleHeadR4Shenwei5', sizeStr: '256*256' }
+    { category: '特效皮头像', resource: '伴生特效皮头像方-大', folder: 'RoleCharacter', name: 'RoleHeadR4Shenwei5', sizeStr: '800*800' },
+    { category: '特效皮头像', resource: '伴生特效皮头像方-小', folder: 'Role', name: 'RoleHeadR4Shenwei5', sizeStr: '140*140' },
+    { category: '特效皮头像', resource: '伴生特效皮战队头像-圆', folder: 'RolePlayerSp', name: 'RoleHeadR4Shenwei5', sizeStr: '256*256' }
 ];
 
 // ---- 成就覆盖层 ----
