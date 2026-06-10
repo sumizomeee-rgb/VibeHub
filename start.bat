@@ -42,7 +42,7 @@ set "ENV_OK=1"
 
 where node >nul 2>&1
 if errorlevel 1 (
-    echo   [X] Node.js not found - required by Claude CLI
+    echo   [X] Node.js not found
     set "ENV_OK=0"
 ) else (
     echo   [OK] Node.js found
@@ -58,16 +58,14 @@ if errorlevel 1 (
 
 where claude >nul 2>&1
 if errorlevel 1 (
-    echo   [X] Claude CLI not found - run: npm install -g @anthropic-ai/claude-code
-    set "ENV_OK=0"
+    echo   [WARN] Claude CLI not found - tool generation will be unavailable until installed
 ) else (
     echo   [OK] Claude CLI found
 )
 
 where bash >nul 2>&1
 if errorlevel 1 (
-    echo   [X] Git Bash not found - install Git from https://git-scm.com/downloads/win
-    set "ENV_OK=0"
+    echo   [WARN] Git Bash not found - Claude CLI on Windows may not work until Git Bash is installed
 ) else (
     echo   [OK] Git Bash found
 )

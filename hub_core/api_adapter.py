@@ -198,7 +198,7 @@ async def rebuild_frontend():
             capture_output=True,
             text=True,
             timeout=120,
-            shell=True,
+            shell=False,
         )
         if result.returncode != 0:
             log.error(f"前端构建失败: {result.stderr[:500]}")

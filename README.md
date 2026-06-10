@@ -146,21 +146,42 @@ VibeHub/
 | **Node.js + npm** | Claude CLI 运行依赖 + 前端构建 |
 | **Claude CLI** | `npm install -g @anthropic-ai/claude-code` |
 | **Git Bash** | Claude CLI 在 Windows 上需要 bash 环境 |
-| **uv.exe** | Python 脚本运行器，放入 `bin/` 目录，[下载地址](https://github.com/astral-sh/uv/releases) |
-| **caddy.exe** | HTTP 反向代理，放入 `bin/` 目录，[下载地址](https://github.com/caddyserver/caddy/releases) |
+| **uv** | Python 脚本运行器，Windows 放 `bin/uv.exe`，Linux 放 `bin/uv`，[下载地址](https://github.com/astral-sh/uv/releases) |
+| **caddy** | HTTP 反向代理，Windows 放 `bin/caddy.exe`，Linux 放 `bin/caddy`，[下载地址](https://github.com/caddyserver/caddy/releases) |
 
 ### 启动
+
+#### Windows
 
 ```bash
 # 双击 start.bat 或在命令行执行
 start.bat
 ```
 
+#### Linux
+
+Linux 需要使用 Linux 版二进制，不能把 Windows 的 `uv.exe` / `caddy.exe` 改名后直接运行。可执行文件优先级如下：
+
+1. 环境变量 `VIBEHUB_UV` / `VIBEHUB_CADDY`
+2. 项目内 `bin/uv` / `bin/caddy`
+3. 系统 PATH 中的 `uv` / `caddy`
+
+```bash
+# 可选：如果想直接执行脚本
+chmod +x start.sh
+
+# 启动
+./start.sh
+
+# 或者不改权限，直接用 bash 执行
+bash start.sh
+```
+
 启动脚本会自动完成：
-1. 检查环境依赖（Node.js, npm, Claude CLI, Git Bash, uv, caddy）
+1. 检查环境依赖（Node.js, npm, Claude CLI, uv, caddy；Windows 额外检查 Git Bash）
 2. 初始化数据目录
 3. 构建前端（首次启动自动执行 `npm install && npm run build`）
-4. 配置防火墙规则（端口 9529）
+4. 配置防火墙规则（Windows）或清理本地旧进程（Linux）
 5. 启动 Caddy 网关 + VibeHub 主服务
 
 ### 访问

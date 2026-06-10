@@ -3,7 +3,7 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
-from hub_core.config import REGISTRY_FILE, REGISTRY_STATE_FILE
+from hub_core.config import ROOT, REGISTRY_FILE, REGISTRY_STATE_FILE
 
 log = logging.getLogger("vibehub.registry")
 
@@ -43,6 +43,15 @@ def _save_state(data: dict):
     _save_json(REGISTRY_STATE_FILE, data)
 
 
+def _portable_script_path(script_path: str | Path) -> str:
+    """Store project-owned script paths relative to the repo root."""
+    path = Path(script_path)
+    try:
+        return path.resolve().relative_to(ROOT).as_posix()
+    except (OSError, RuntimeError, ValueError):
+        return path.as_posix()
+
+
 def load() -> dict:
     """合并结构数据和运行时状态，返回完整视图"""
     reg = _load_registry()
@@ -68,6 +77,8 @@ def save(data: dict):
         for k, v in info.items():
             if k in _RUNTIME_FIELDS:
                 s[k] = v
+            elif k == "path":
+                r[k] = _portable_script_path(v)
             else:
                 r[k] = v
         reg[slug] = r
@@ -81,7 +92,7 @@ def register_tool(slug: str, display_name: str, script_path: str):
     state = _load_state()
     reg[slug] = {
         "display_name": display_name,
-        "path": script_path,
+        "path": _portable_script_path(script_path),
         "route_slug": slug,
         "created_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "auto_start": True,
