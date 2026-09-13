@@ -8,6 +8,7 @@ import io
 import zipfile
 import uuid
 from pathlib import Path
+from urllib.parse import quote
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import HTMLResponse, StreamingResponse
 
@@ -163,12 +164,18 @@ async def download_zip(task_id: str):
             zf.writestr(f"{task['filename']}_page_{page_num}.png", png_data)
     buf.seek(0)
 
-    safe_filename = task["filename"].replace('"', "_")
+    # HTTP 头只支持 latin-1，中文文件名必须按 RFC 6266 用 filename* 传递
+    ascii_name = "".join(c if 32 <= ord(c) < 127 and c not in '\\";' else "_" for c in task["filename"])
+    if not any(c.isalnum() for c in ascii_name):
+        ascii_name = "converted"
+    download_name = f"{task['filename']}_images.zip"
     return StreamingResponse(
         buf,
         media_type="application/zip",
         headers={
-            "Content-Disposition": f'attachment; filename="{safe_filename}_images.zip"'
+            "Content-Disposition": f"attachment; filename=\"{ascii_name}_images.zip\"; "
+                                   f"filename*=UTF-8''{quote(download_name, safe='')}",
+            "Content-Length": str(buf.getbuffer().nbytes),
         },
     )
 

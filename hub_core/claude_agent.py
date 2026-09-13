@@ -68,6 +68,19 @@ def _build_mission_prompt(
    HTML/JS 中所有 fetch/XHR/form URL 必须是相对路径（无前导 `/`）。
    使用 `api/upload` 而非 `/api/upload`。
 
+### HTTP 响应规范
+7.1 HTTP 响应头只能是 latin-1 编码，**禁止**把中文/非 ASCII 字符直接拼进
+    `Content-Disposition`（会抛 UnicodeEncodeError 导致 500 Internal Server Error）。
+    下载接口必须使用 RFC 6266 双写法，`filename` 用 ASCII 兜底，中文名放 `filename*`：
+    ```python
+    from urllib.parse import quote
+    name = "中文名称.zip"  # 最终文件名
+    headers = {
+        "Content-Disposition": f"attachment; filename=\"download.zip\"; filename*=UTF-8''{quote(name, safe='')}"
+    }
+    ```
+    已知长度时同时返回 `Content-Length` 头，便于浏览器显示下载进度。
+
 ### UI 设计规范 (VibeHub 统一风格)
 8. 颜色：主色 #cba186，背景 #f0f2f5，白色卡片
 9. 卡片：border-radius: 16px, box-shadow: 0 2px 12px rgba(0,0,0,.08)
