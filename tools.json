@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "tools": [
+    {"id": "avatar_crop_tool", "name": "头像切图工具", "description": "按规格裁切头像，管理覆盖层并批量导出。", "icon": "avatar"},
+    {"id": "character_portrait_slicer", "name": "角色立绘切图", "description": "从角色立绘生成不同尺寸的头像与特写。", "icon": "crop"},
+    {"id": "yishi_crop_tool", "name": "意识切图工具", "description": "处理意识素材，预览并打包切图结果。", "icon": "image"},
+    {"id": "images_to_pdf_converter", "name": "图片转 PDF", "description": "将多张图片整理为一份 PDF 文档。", "icon": "pdf"},
+    {"id": "pdf_to_images_converter", "name": "PDF 转图片", "description": "逐页转换 PDF，预览图片并下载压缩包。", "icon": "pages"}
+  ]
+}

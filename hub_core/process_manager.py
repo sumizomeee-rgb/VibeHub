@@ -1,116 +1,82 @@
+"""Start PEP 723 tools; dependencies and HTTP servers remain isolated subprocesses."""
 import asyncio
-import logging
-import os
-import subprocess
+from dataclasses import dataclass
 from pathlib import Path
 
-import psutil
+import httpx
 
-from hub_core.config import UV_EXE, LOGS_DIR, PROJECTS_DIR
-from hub_core.port_manager import find_free_port
-
-log = logging.getLogger("vibehub.process")
-
-# 运行时状态：slug → {pid, port, process}
-_running_tools: dict[str, dict] = {}
+from hub_core.catalog import Catalog, ToolSpec
+from hub_core.child_process import ChildProcess, clean_environment
+from hub_core.config import Settings, resolve_executable
+from hub_core.caddy_gateway import free_port
 
 
-def start_tool(slug: str, display_name: str = "") -> tuple[int, int]:
-    """启动工具子进程，返回 (pid, port)"""
-    script_path = PROJECTS_DIR / slug / "main.py"
-    if not script_path.exists():
-        raise FileNotFoundError(f"工具脚本不存在: {script_path}")
+@dataclass
+class RunningTool:
+    child: ChildProcess
+    port: int
 
-    port = find_free_port()
-    LOGS_DIR.mkdir(parents=True, exist_ok=True)
-    log_file = LOGS_DIR / f"{slug}.log"
-
-    env = {**os.environ, "PORT": str(port), "DISPLAY_NAME": display_name}
-    proc = subprocess.Popen(
-        [str(UV_EXE), "run", str(script_path)],
-        env=env,
-        stdout=open(log_file, "w", encoding="utf-8"),
-        stderr=subprocess.STDOUT,
-        cwd=str(script_path.parent),
-        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-    )
-
-    _running_tools[slug] = {"pid": proc.pid, "port": port, "process": proc}
-    log.info(f"[{slug}] Started pid={proc.pid} port={port}")
-    return proc.pid, port
+    @property
+    def alive(self) -> bool:
+        return self.child.alive
 
 
-def stop_tool(slug: str):
-    """停止工具子进程（含子进程树）"""
-    info = _running_tools.pop(slug, None)
-    if not info:
-        return
-    pid = info["pid"]
-    try:
-        parent = psutil.Process(pid)
-        children = parent.children(recursive=True)
-        for child in children:
-            child.kill()
-        parent.kill()
-        log.info(f"[{slug}] Stopped pid={pid}")
-    except psutil.NoSuchProcess:
-        log.info(f"[{slug}] Already dead pid={pid}")
+class ToolRunner:
+    def __init__(self, settings: Settings, catalog: Catalog):
+        self.settings = settings
+        self.catalog = catalog
+        self.running: dict[str, RunningTool] = {}
 
+    def start(self, tool: ToolSpec) -> RunningTool:
+        directory = self.catalog.prepare(tool, self.settings)
+        script = directory / "main.py"
+        if not script.is_file():
+            raise FileNotFoundError(script)
+        port = free_port()
+        env = clean_environment()
+        data = self.settings.data_dir
+        tool_data = data / "tools" / tool.id
+        tool_data.mkdir(parents=True, exist_ok=True)
+        env.update({"PORT": str(port), "DISPLAY_NAME": tool.name,
+                    "PYTHONUNBUFFERED": "1", "UV_NO_PROGRESS": "1",
+                    "UV_CACHE_DIR": str(data / "runtime/uv"),
+                    "UV_PYTHON_INSTALL_DIR": str(data / "runtime/python"),
+                    "UV_PYTHON": self.settings.tool_python,
+                    "VIBEHUB_TOOL_DATA_DIR": str(tool_data)})
+        command = [str(resolve_executable("uv", self.settings.bundle_dir)), "run", "--no-project"]
+        if script.with_suffix(".py.lock").exists():
+            command.append("--locked")
+        command += ["--script", str(script)]
+        child = ChildProcess(command, cwd=directory, env=env,
+                             log_file=data / "logs/tools" / f"{tool.id}.log")
+        result = RunningTool(child, port)
+        self.running[tool.id] = result
+        return result
 
-def restart_tool(slug: str) -> tuple[int, int]:
-    stop_tool(slug)
-    return start_tool(slug)
+    async def wait_ready(self, tool: RunningTool):
+        deadline = asyncio.get_running_loop().time() + self.settings.startup_timeout
+        async with httpx.AsyncClient(timeout=1, trust_env=False, follow_redirects=False) as client:
+            while asyncio.get_running_loop().time() < deadline:
+                if not tool.alive:
+                    raise RuntimeError("工具进程提前退出")
+                try:
+                    response = await client.get(f"http://127.0.0.1:{tool.port}/")
+                    if 200 <= response.status_code < 400:
+                        return
+                except httpx.HTTPError:
+                    pass
+                await asyncio.sleep(0.25)
+        raise TimeoutError("准备运行环境或启动工具超时")
 
+    async def stop(self, tool_id: str):
+        running = self.running.pop(tool_id, None)
+        if running:
+            await asyncio.to_thread(running.child.stop)
 
-def is_tool_alive(slug: str) -> bool:
-    info = _running_tools.get(slug)
-    if not info:
-        return False
-    return psutil.pid_exists(info["pid"])
+    async def close(self):
+        await asyncio.gather(*(self.stop(tool_id) for tool_id in list(self.running)))
 
-
-def get_tool_port(slug: str) -> int | None:
-    info = _running_tools.get(slug)
-    return info["port"] if info else None
-
-
-def get_tool_log(slug: str, tail: int = 50) -> str:
-    """读取工具日志尾部"""
-    log_file = LOGS_DIR / f"{slug}.log"
-    if not log_file.exists():
-        return ""
-    lines = log_file.read_text(encoding="utf-8", errors="replace").splitlines()
-    return "\n".join(lines[-tail:])
-
-
-async def wait_for_tool_ready(slug: str, timeout: float = 5.0) -> bool:
-    """等待工具进程就绪（进程存活 + 端口可连接）"""
-    info = _running_tools.get(slug)
-    if not info:
-        return False
-
-    port = info["port"]
-    import socket
-    deadline = asyncio.get_event_loop().time() + timeout
-
-    while asyncio.get_event_loop().time() < deadline:
-        if not psutil.pid_exists(info["pid"]):
-            return False
-        try:
-            with socket.create_connection(("127.0.0.1", port), timeout=0.5):
-                return True
-        except (ConnectionRefusedError, OSError, TimeoutError):
-            await asyncio.sleep(0.3)
-
-    return False
-
-
-def get_all_running() -> dict[str, dict]:
-    """返回所有运行中工具的 {slug: {pid, port}} 快照"""
-    return {slug: {"pid": v["pid"], "port": v["port"]} for slug, v in _running_tools.items()}
-
-
-def stop_all():
-    """停止所有工具子进程"""
-    for slug in list(_running_tools.keys()):
-        stop_tool(slug)
+    def emergency_stop(self):
+        for running in list(self.running.values()):
+            running.child.stop()
+        self.running.clear()

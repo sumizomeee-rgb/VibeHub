@@ -1,55 +1,63 @@
+"""One configuration model for the web server and the desktop window.
+
+Bundled files are read-only. All caches, logs and tool data live under data_dir.
+Nothing in this module starts processes or creates directories at import time.
+"""
+from dataclasses import dataclass
 import os
-import shutil
 from pathlib import Path
+import shutil
+import sys
+import tomllib
 
-ROOT = Path(__file__).resolve().parent.parent
-BIN_DIR = ROOT / "bin"
-DATA_DIR = ROOT / "data"
-PROJECTS_DIR = ROOT / "projects"
-LOGS_DIR = DATA_DIR / "logs" / "tools"
-REGISTRY_FILE = DATA_DIR / "registry.json"
-REGISTRY_STATE_FILE = DATA_DIR / "registry_state.json"
-
-def _resolve_executable(
-    env_var: str,
-    binary_name: str,
-    *,
-    bin_dir: Path = BIN_DIR,
-    is_windows: bool = os.name == "nt",
-    which=shutil.which,
-) -> Path:
-    """Resolve bundled or system executable with env override first."""
-    configured = os.environ.get(env_var)
-    if configured:
-        return Path(configured)
-
-    local_name = f"{binary_name}.exe" if is_windows else binary_name
-    local_path = bin_dir / local_name
-    if local_path.exists():
-        return local_path
-
-    path_match = which(binary_name)
-    if path_match:
-        return Path(path_match)
-
-    return local_path
+ROOT = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent.parent)).resolve()
 
 
-UV_EXE = _resolve_executable("VIBEHUB_UV", "uv")
-CADDY_EXE = _resolve_executable("VIBEHUB_CADDY", "caddy")
-CADDY_ADMIN_URL = "http://localhost:2019"
+def resolve_executable(name: str, root: Path = ROOT) -> Path:
+    override = os.environ.get(f"VIBEHUB_{name.upper()}")
+    if override:
+        return Path(override).expanduser().resolve()
+    filename = name + (".exe" if os.name == "nt" else "")
+    target = "windows-x64" if os.name == "nt" else "linux-x64"
+    bundled = root / "bin" / target / filename
+    if not bundled.is_file():
+        bundled = root / "bin" / filename
+    return bundled if bundled.is_file() else Path(shutil.which(name) or bundled)
 
-GATEWAY_PORT = 9529
-HUB_INTERNAL_PORT = 8080
 
-# Claude CLI on Windows requires git-bash — auto-detect from PATH
-if "CLAUDE_CODE_GIT_BASH_PATH" not in os.environ:
-    bash_path = shutil.which("bash")
-    if bash_path:
-        os.environ["CLAUDE_CODE_GIT_BASH_PATH"] = bash_path
+@dataclass(frozen=True)
+class Settings:
+    bundle_dir: Path = ROOT
+    data_dir: Path = ROOT / ".runtime"
+    host: str = "127.0.0.1"
+    port: int = 9529
+    hub_port: int = 8080
+    desktop: bool = False
+    startup_timeout: float = 180.0
+    tool_python: str = "3.12"
 
-# shutil.which resolves .cmd/.bat on Windows
-CLAUDE_CMD = shutil.which("claude") or "claude"
-MAX_HEAL_RETRIES = 3
-AGENT_TIMEOUT = 300  # Agent 模式超时（秒），需完成 创建+测试+修复 的完整循环
-RESTART_EXIT_CODE = 42
+    @property
+    def version(self) -> str:
+        with (self.bundle_dir / "pyproject.toml").open("rb") as f:
+            return tomllib.load(f)["project"]["version"]
+
+    @property
+    def release_dir(self) -> Path:
+        return Path(os.environ.get("VIBEHUB_RELEASE_DIR", str(self.bundle_dir / "release"))).resolve()
+
+    @classmethod
+    def from_env(cls, *, desktop: bool = False) -> "Settings":
+        default_data = ROOT / ".runtime"
+        if desktop or getattr(sys, "frozen", False):
+            if os.name == "nt":
+                default_data = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData/Local")) / "VibeHub"
+            else:
+                default_data = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share")) / "VibeHub"
+        return cls(
+            data_dir=Path(os.environ.get("VIBEHUB_DATA_DIR", default_data)).expanduser().resolve(),
+            host="127.0.0.1" if desktop else os.environ.get("VIBEHUB_HOST", "127.0.0.1"),
+            port=0 if desktop else int(os.environ.get("VIBEHUB_PORT", "9529")),
+            desktop=desktop,
+            startup_timeout=float(os.environ.get("VIBEHUB_STARTUP_TIMEOUT", "180")),
+            tool_python=os.environ.get("VIBEHUB_TOOL_PYTHON", "3.12"),
+        )

@@ -40,3 +40,10 @@ nul
 # Frontend
 frontend/node_modules/
 frontend/dist/
+
+# V3 generated output and persistent local data
+.runtime/
+release/
+verification/
+*.spec
+.playwright/

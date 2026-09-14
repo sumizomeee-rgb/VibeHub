@@ -1,222 +1,121 @@
-# 🚀 VibeHub
+# VibeHub · 工具合集
 
-**AI 驱动的 Web 工具工坊** —— 用自然语言描述你想要的工具，AI 自动生成代码、测试、部署并上线，全程无需手写一行代码。
+同一套首页和工具，在浏览器与 Windows 客户端中使用。
 
----
+用户只需：**首页点击工具 → 自动启动 → 使用 → 左上角返回首页**。
+没有 AI、新建、导入、编辑、删除、重命名、手动启停或公开管理 API。
+现有五个工具的业务代码与图片资源保持不变。
 
-## ✨ 项目简介
+## 开发与构建
 
-VibeHub 是一个本地部署的 **AI Web 工具自动化平台**。它将 Claude CLI 作为代码生成引擎，让用户通过自然语言描述需求，即可自动完成：
+构建机准备 **Windows x64、Node.js 22、uv**。Python 3.12 由 uv 管理。
 
-1. **需求审核** — Guard Agent 对用户请求进行分类和过滤
-2. **代码生成** — Claude CLI 根据详细的 Prompt 规范生成完整的 Python Web 工具
-3. **自动测试** — 自动生成并运行测试脚本，未通过则进入自愈修复循环（最多 3 次）
-4. **一键部署** — 通过 `uv` 启动工具进程，Caddy 反向代理自动注册路由
-5. **统一管理** — React + Tailwind 构建的现代化 Dashboard，支持启动/停止/重启/删除/重命名
-
-整个流程从需求到上线，完全自动化。
-
----
-
-## 🏗️ 系统架构
-
-```
-用户浏览器
-    │
-    ▼
-┌─────────────────────────────────────────┐
-│  Caddy 反向代理网关 (0.0.0.0:9529)      │
-│  ┌──────────────┐  ┌──────────────────┐ │
-│  │ /* → Hub UI  │  │ /tools/{slug}/*  │ │
-│  │  (port 8080) │  │  → 各工具进程     │ │
-│  └──────────────┘  └──────────────────┘ │
-└─────────────────────────────────────────┘
-    │                         │
-    ▼                         ▼
-┌──────────┐         ┌──────────────┐
-│ FastAPI  │         │ 工具子进程    │
-│ Hub Core │         │ (FastAPI +   │
-│ port 8080│         │  Uvicorn)    │
-└──────────┘         └──────────────┘
-    │
-    ├── React SPA (Dashboard + Builder)
-    ├── REST API (/api/*)
-    ├── WebSocket (/ws/build/*)
-    ├── Claude Agent (代码生成)
-    └── Guard Agent (需求审核)
+```bat
+build.bat
 ```
 
----
+脚本执行测试、校验 `tools.json` 与 PEP 723、`npm ci`、前端生产构建，下载并校验固定版本的 uv/Caddy，收集完整工具目录，然后产出：
 
-## 📁 项目结构
+- `release/windows/VibeHub.exe`：PyInstaller 单文件 Windows 客户端。
+- `release/windows/latest.json`：version / platform / filename / bytes / sha256。
+- `release/web/` 和 `release/VibeHub-web.zip`：相同前端、清单及工具的 Web 发布包。
+- Windows 上 `--target all` 会把 Windows 下载文件一并放入 Web 包的 `release/windows/`。
 
-```
-VibeHub/
-├── main.py                    # 应用入口，FastAPI + SPA 静态托管
-├── pyproject.toml             # 项目元数据和依赖声明
-├── start.bat                  # Windows 一键启动脚本
-│
-├── hub_core/                  # 核心后端模块
-│   ├── config.py              # 全局配置（路径、端口、CLI 检测）
-│   ├── registry.py            # 工具注册表（JSON 持久化）
-│   ├── process_manager.py     # 子进程管理（启动/停止/健康检查）
-│   ├── caddy_gateway.py       # Caddy Admin API 网关管理
-│   ├── claude_agent.py        # Claude CLI 代码生成 & 自愈修复
-│   ├── guard_agent.py         # 需求审核 Agent（请求分类过滤）
-│   ├── port_manager.py        # 空闲端口分配
-│   ├── api_adapter.py         # REST API + WebSocket 端点
-│   └── build_manager.py       # 构建任务管理器（异步 + WS 推送）
-│
-├── frontend/                  # React 前端（Vite + Tailwind）
-│   ├── package.json
-│   ├── vite.config.js
-│   ├── index.html
-│   └── src/
-│       ├── main.jsx
-│       ├── App.jsx
-│       ├── index.css           # Tailwind + 设计令牌（明暗主题）
-│       ├── pages/
-│       │   ├── Dashboard.jsx   # 工具看板
-│       │   └── Builder.jsx     # 构建台
-│       ├── components/
-│       │   ├── Header.jsx
-│       │   ├── ToolCard.jsx
-│       │   ├── ProgressStepper.jsx
-│       │   └── LogConsole.jsx
-│       ├── api/
-│       │   ├── tools.js
-│       │   └── builder.js
-│       └── ws/
-│           └── build.js
-│
-├── projects/                  # AI 生成的工具目录
-│   └── {slug}/main.py
-│
-├── bin/                       # 外部二进制（不纳入版本控制）
-│   ├── uv.exe
-│   └── caddy.exe
-│
-├── data/                      # 运行时数据（不纳入版本控制）
-│   ├── registry.json
-│   └── logs/
-│
-└── runtime/                   # uv 缓存目录（不纳入版本控制）
+Linux 只构建 Web 发布包：
+
+```sh
+uv run --python 3.12 --locked --group build --group test python build.py --target web
 ```
 
----
+Windows exe 必须在 Windows 上编译。仓库的 GitHub Actions 在 Linux/Windows 上分别执行测试、真实进程/代理检查和构建；Windows 还验证冻结 exe 与 WebView2 首页启动。
 
-## 🔧 核心模块说明
+开发期命令：
 
-### `claude_agent.py` — AI 代码生成引擎
-
-- 调用 Claude CLI 生成符合严格规范的 Python Web 工具代码
-- 代码规范包括：PEP 723 内联元数据、动态端口绑定、相对路径 URL、单文件架构
-- 支持自动生成测试脚本并执行，未通过时自动修复（自愈循环）
-- 通过 stdin 管道传递 Prompt，完美规避 Windows CMD 引号解析问题
-
-### `guard_agent.py` — 需求审核 Agent
-
-- 使用 Claude CLI 对用户请求进行分类
-- 合法请求返回 `PASS|slug|display_name`
-- 非法请求（闲聊、攻击等）返回 `REJECT|原因`
-
-### `api_adapter.py` — REST API 适配层
-
-- `GET /api/tools` — 工具列表（含实时存活状态）
-- `POST /api/tools/{slug}/start|stop|restart` — 进程控制
-- `DELETE /api/tools/{slug}` — 删除工具
-- `POST /api/build` — 启动构建任务
-- `WebSocket /ws/build/{task_id}` — 构建进度实时推送
-
-### `build_manager.py` — 构建任务管理器
-
-- 将构建流程（审核→生成→测试→启动→路由→完成）封装为异步任务
-- 通过 WebSocket 实时推送 6 步进度和日志
-- 支持 per-slug 锁防止并发构建冲突
-- 15 秒心跳保活，支持断线重连恢复
-
----
-
-## 🚀 快速开始
-
-### 前置要求
-
-| 依赖 | 说明 |
-|------|------|
-| **Node.js + npm** | Claude CLI 运行依赖 + 前端构建 |
-| **Claude CLI** | `npm install -g @anthropic-ai/claude-code` |
-| **Git Bash** | Claude CLI 在 Windows 上需要 bash 环境 |
-| **uv** | Python 脚本运行器，Windows 放 `bin/uv.exe`，Linux 放 `bin/uv`，[下载地址](https://github.com/astral-sh/uv/releases) |
-| **caddy** | HTTP 反向代理，Windows 放 `bin/caddy.exe`，Linux 放 `bin/caddy`，[下载地址](https://github.com/caddyserver/caddy/releases) |
-
-### 启动
-
-#### Windows
-
-```bash
-# 双击 start.bat 或在命令行执行
-start.bat
+```sh
+uv sync --python 3.12 --locked --group test
+uv run --locked python -m scripts.runtime_binaries
+cd frontend && npm ci && npm run build
+# 返回仓库根目录
+uv run --locked python main.py
+# Windows 桌面开发模式
+uv run --locked --group desktop python desktop.py
 ```
 
-#### Linux
+前端热更新：启动后端后，在 `frontend/` 运行 `npm run dev`。Vite 把 `/api` 和 `/tools` 都代理到网关 9529。
 
-Linux 需要使用 Linux 版二进制，不能把 Windows 的 `uv.exe` / `caddy.exe` 改名后直接运行。可执行文件优先级如下：
+## 运行发布包
 
-1. 环境变量 `VIBEHUB_UV` / `VIBEHUB_CADDY`
-2. 项目内 `bin/uv` / `bin/caddy`
-3. 系统 PATH 中的 `uv` / `caddy`
+Windows 用户双击 `VibeHub.exe`，无需 Node.js、Claude、Git Bash 或 Anthropic 配置。需要 **Microsoft Edge WebView2 Runtime**。
 
-```bash
-# 可选：如果想直接执行脚本
-chmod +x start.sh
+Web 发布包运行 `start.bat` 或 `./start.sh`。默认仅监听 `127.0.0.1:9529`；明确需要局域网访问时使用 `start.bat --host 0.0.0.0` / `./start.sh --host 0.0.0.0`。不会自动改防火墙，也不会按进程名称或占用端口杀其他应用。
 
-# 启动
-./start.sh
+**单 exe 不等于完全离线。** Hub Python 已打包，但工具使用 uv 管理的独立 Python 和依赖；首次运行可能联网下载。现有工具中的第三方 CDN 资源仍可能需要联网。此版本不承诺离线首次启动。
 
-# 或者不改权限，直接用 bash 执行
-bash start.sh
+## 新增工具：只改工具与清单
+
+1. 复制 `templates/basic-tool/` 到 `projects/<id>/`，实现功能。
+2. 在 `tools.json` 添加一项：
+
+```json
+{"id":"my_tool","name":"我的工具","description":"工具用途","icon":"tool"}
 ```
 
-启动脚本会自动完成：
-1. 检查环境依赖（Node.js, npm, Claude CLI, uv, caddy；Windows 额外检查 Git Bash）
-2. 初始化数据目录
-3. 构建前端（首次启动自动执行 `npm install && npm run build`）
-4. 配置防火墙规则（Windows）或清理本地旧进程（Linux）
-5. 启动 Caddy 网关 + VibeHub 主服务
+3. 生成并提交依赖锁：`uv lock --script projects/my_tool/main.py`。
+4. 执行同一个 `build.bat`。不需要改前端路由、桌面入口或打包文件清单。
 
-### 访问
+`ToolSpec` 是共享清单模型；`ToolHost` 是共享页面容器。返回首页、启动等待、失败重试只实现一次。返回首页后，已打开的 iframe 保持挂载，重新进入不主动清空页面状态。刷新页面或退出应用会结束当前页面会话。
 
-- **LAN 访问**：`http://localhost:9529/`
-- **内部 UI**：`http://127.0.0.1:8080/`
+**公开工具入口是 `/tool/<id>`**。`/tools/<id>/` 是 iframe 内部运行地址，不用于绕过外层导航。
 
----
+完整约定见 [docs/TOOL_SPEC.md](docs/TOOL_SPEC.md)。
 
-## 🎨 界面特性
+## 结构
 
-- **现代 SaaS 风格** — Inter 字体、圆角卡片、渐变配色
-- **明暗双主题** — 一键切换，localStorage 持久化
-- **实时状态指示** — 运行中(绿色脉冲)、异常(红色)、已停止(灰色)
-- **部署进度条** — 6 步进度可视化（审核 → 生成 → 测试 → 启动 → 路由 → 完成）
-- **终端风格日志** — JetBrains Mono 字体，实时 WebSocket 推送
-- **Bento Grid 布局** — 运行中工具自动扩展为双列卡片
+```text
+hub_core/
+  catalog.py          ToolSpec、目录/PEP 723 校验、资源收集
+  tool_service.py     唯一启动协调器：去重、就绪、失败与重试
+  process_manager.py  uv 工具子进程与 HTTP 健康检查
+  child_process.py    进程归属、Windows Job Object、实例锁
+  caddy_gateway.py    当前实例专用的 Caddy 与动态路由
+  api_adapter.py      只读清单、自动打开、发行下载 API
+  application.py      两端共用的启动/退出生命周期
+frontend/             唯一一份 React 页面和 ToolHost
+projects/             工具代码、main.py.lock 与资源
+main.py               Web 入口
+desktop.py            WebView2 窗口与退出清理
+build.py              唯一构建入口
+```
 
----
+两端都使用真实本地 HTTP 和相同子路径代理，不维护 TestClient 生产桥接分支。Caddy 由当前进程拥有，Admin API 使用随机回环端口，不使用全局 2019；Hub 内部端口也动态分配。桌面网关仅绑定回环地址。
 
-## 🛠️ 技术栈
+## 数据与日志
 
-| 组件 | 技术 |
-|------|------|
-| 后端框架 | [FastAPI](https://fastapi.tiangolo.com/) + [Uvicorn](https://www.uvicorn.org/) |
-| 前端框架 | [React 18](https://react.dev/) + [Vite](https://vite.dev/) + [Tailwind CSS 4](https://tailwindcss.com/) |
-| AI 引擎 | Claude CLI (`@anthropic-ai/claude-code`) |
-| 工具运行时 | [uv](https://github.com/astral-sh/uv) + PEP 723 |
-| 反向代理 | [Caddy](https://caddyserver.com/) (Admin API 动态配置) |
-| 进程管理 | psutil |
-| HTTP 客户端 | httpx (异步) |
-| 生成工具框架 | FastAPI + Uvicorn (单文件架构) |
+源码开发：`.runtime/`。桌面：`%LOCALAPPDATA%\VibeHub`。通过 `VIBEHUB_DATA_DIR` 可覆盖。
 
----
+- `logs/`：平台和工具日志；不对用户公开代码/日志管理页面。
+- `runtime/uv`、`runtime/python`：依赖缓存与工具 Python。
+- `apps/<id>/<content-hash>/`：冻结版工具代码及资源的持久副本。
+- `tools/<id>/`：新工具可通过 `VIBEHUB_TOOL_DATA_DIR` 存放用户数据。
+- `webview/`：窗口浏览器存储。
 
-## 📝 License
+PyInstaller 临时解压目录只读使用，不能用于持久化。一个数据目录只允许一个活动实例；不会覆盖正在运行实例的状态。退出应用停止所有属于本实例的工具及 Caddy；Windows 用 Job Object 在异常退出时清理后代进程。
 
-私有项目，仅供个人使用。
+旧的 `data/registry.json` / `registry_state.json` 不再参与启动，也不会被自动删除或覆盖。V3 使用随版本发布的 `tools.json`，不迁移旧自动启动配置。
+
+## 下载服务与发布
+
+服务端读取 `release/windows/latest.json` 与其指向的 exe：
+
+- `GET /api/desktop/latest`
+- `GET /api/desktop/download`（支持文件响应与 Range）
+
+没有有效 Windows 发行文件时返回 404，首页不显示下载按钮。可通过 `VIBEHUB_RELEASE_DIR` 指向外部发布目录。部署时先上传新 exe，再替换对应清单；不要把尚未完整传输的文件作为 latest 发布。
+
+构建只是生成产物，不会自动部署服务器、上传 GitHub Release 或静默更新已安装的客户端。
+
+## 维护边界
+
+工具代码是受信任的本地 Python，并非沙箱。不要把来自未知来源的脚本加入清单。不要向公网直接开放未认证的工具服务；生产公网部署应在外层加认证和 TLS。
+
+维护 Agent 请先阅读 [AGENTS.md](AGENTS.md)。项目原有许可声明保持：个人项目，仅供个人使用；运行时依赖使用各自上游许可证。
