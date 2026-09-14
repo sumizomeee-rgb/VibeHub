@@ -1,0 +1,54 @@
+name: Verify and build
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install backend dependencies
+        run: python -m pip install .
+      - name: Backend tests
+        run: python -m unittest discover -s tests -v
+      - name: Frontend build
+        working-directory: frontend
+        run: npm ci && npm run build
+        shell: bash
+      - name: Export source and frontend verification workspace
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          mkdir -p verification
+          git archive --format=tar HEAD > verification/source.tar
+          tar -czf verification/frontend-dependencies.tar.gz -C frontend node_modules
+      - uses: actions/upload-artifact@v4
+        if: runner.os == 'Linux'
+        with:
+          name: verification-workspace-linux
+          path: verification/
+          retention-days: 3
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frontend-${{ runner.os }}
+          path: frontend/dist/
+          retention-days: 7
