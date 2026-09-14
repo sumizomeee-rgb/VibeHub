@@ -12,4 +12,4 @@ dependencies = [
 [dependency-groups]
 desktop = ["pywebview==6.2.1; sys_platform == 'win32'"]
 test = ["pillow>=11", "pymupdf>=1.25", "python-multipart>=0.0.20", "playwright==1.55.0"]
-build = [{include-group = "desktop"}, "pyinstaller==6.16.0", "cairosvg>=2.7", "pillow>=11"]
+build = [{include-group = "desktop"}, "pyinstaller==6.16.0", "pillow>=11"]
