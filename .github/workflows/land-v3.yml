@@ -18,35 +18,58 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: cc845ddb1aed7cf5833bd4f6553efaaa0c7673a4
+          ref: ae29581382c3d81c35b14353c011c1956b66c101
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Generate and stage dependency locks
+      - name: Apply reviewed integration fixes
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('hub_core/child_process.py')
+          s = p.read_text()
+          old = '        self.file.seek(0)\n        if not self.file.read(1):\n            self.file.write(b"0")\n            self.file.flush()\n        self.file.seek(0)\n        try:\n            if os.name == "nt":'
+          new = '        try:\n            # Windows denies reads of a region locked by another process. Inspect\n            # the file length instead, and include setup in the failure cleanup.\n            if os.fstat(self.file.fileno()).st_size == 0:\n                self.file.write(b"0")\n                self.file.flush()\n            self.file.seek(0)\n            if os.name == "nt":'
+          assert old in s
+          p.write_text(s.replace(old, new), encoding='utf-8')
+          p = Path('hub_core/caddy_gateway.py')
+          s = p.read_text()
+          old = '        response = await self.client.post("/config/apps/http/servers/vibehub/routes", json=self._routes(routes))'
+          new = '        # PATCH replaces the routes array; POST would append a nested array.\n        response = await self.client.patch("/config/apps/http/servers/vibehub/routes", json=self._routes(routes))'
+          assert old in s
+          p.write_text(s.replace(old, new), encoding='utf-8')
+          p = Path('frontend/src/index.css')
+          p.write_text(p.read_text().replace(':root { --vh-bg: #f3f4f8; }\n', ''), encoding='utf-8')
+          p = Path('desktop.py')
+          s = p.read_text()
+          old = '        raise\n\n\nif __name__'
+          new = '        traceback.print_exc()\n        raise SystemExit(1) from error\n\n\nif __name__'
+          assert old in s
+          p.write_text(s.replace(old, new), encoding='utf-8')
+          p = Path('.github/workflows/verify.yml')
+          s = p.read_text().replace('          name: verification-${{ runner.os }}\n', '          name: verification-${{ runner.os }}\n          include-hidden-files: true\n')
+          p.write_text(s, encoding='utf-8')
+          PY
+      - name: Restore and stage dependency locks
         shell: bash
         run: |
           python -m pip install uv==0.8.22
-          uv lock
-          python - <<'PY'
-          import json, subprocess
-          for tool in json.load(open('tools.json'))['tools']:
-              subprocess.run(['uv', 'lock', '--script', f"projects/{tool['id']}/main.py"], check=True)
-          PY
-          git add uv.lock projects/*/main.py.lock
+          uv lock --check
+          git add -u
           git archive --format=tar -o source.tar "$(git write-tree)"
       - name: Prepare immutable commit without updating any branch
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           python - <<'PY'
-          import json, os, pathlib, urllib.request
+          import json, os, pathlib, subprocess, urllib.request
           root = 'https://api.github.com/repos/' + os.environ['GITHUB_REPOSITORY']
           def api(path, data=None):
               request = urllib.request.Request(root + path, data=json.dumps(data).encode() if data is not None else None,
                   headers={'Authorization': 'Bearer ' + os.environ['GH_TOKEN'], 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28'})
               with urllib.request.urlopen(request) as response: return json.load(response)
-          candidate = api('/git/commits/cc845ddb1aed7cf5833bd4f6553efaaa0c7673a4')
-          paths = [pathlib.Path('uv.lock'), *pathlib.Path('projects').glob('*/main.py.lock')]
+          candidate = api('/git/commits/ae29581382c3d81c35b14353c011c1956b66c101')
+          paths = [pathlib.Path(p) for p in subprocess.check_output(['git','diff','--cached','--name-only'],text=True).splitlines()]
           tree = api('/git/trees', {'base_tree': candidate['tree']['sha'], 'tree': [
               {'path': path.as_posix(), 'mode': '100644', 'type': 'blob', 'content': path.read_text(encoding='utf-8')} for path in paths]})
           commit = api('/git/commits', {'message': 'refactor: ship curated tool collection with shared web/Windows launcher and locked builds',
@@ -84,6 +107,11 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: frontend/package-lock.json
+      - name: Record existing frontend dependency audit
+        if: runner.os == 'Linux'
+        continue-on-error: true
+        working-directory: frontend
+        run: mkdir -p ../verification && npm audit --json > ../verification/npm-audit.json
       - name: Restore locked build environment
         run: |
           python -m pip install uv==0.8.22
@@ -109,6 +137,7 @@ jobs:
         if: always()
         with:
           name: candidate-verification-${{ runner.os }}
+          include-hidden-files: true
           path: |
             candidate.json
             verification/
