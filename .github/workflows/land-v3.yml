@@ -18,7 +18,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ff4c235aa859e3ff2612455ea6e2ffcc5e1083f3
+          ref: af68d76d457b970c9a18d588215b6c100f9893f5
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -27,19 +27,13 @@ jobs:
         run: |
           npm audit fix --package-lock-only --ignore-scripts
           npm audit --audit-level=high
-      - name: Improve validation diagnostics and Chinese font fallback
+      - name: Add Chinese font fallback
         run: |
           python - <<'PY'
           from pathlib import Path
           p = Path('frontend/src/index.css')
           s = p.read_text().replace('"Inter", -apple-system, BlinkMacSystemFont, sans-serif', '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif')
           p.write_text(s, encoding='utf-8')
-          p = Path('.github/workflows/verify.yml')
-          s = p.read_text()
-          marker = '      - name: Install test browser\n'
-          insertion = '      - name: Audit frontend dependencies\n        working-directory: frontend\n        run: npm audit --audit-level=high\n      - name: Install Chinese fonts for Linux visual verification\n        if: runner.os == \'Linux\'\n        run: sudo apt-get update && sudo apt-get install -y fonts-noto-cjk\n'
-          assert marker in s
-          p.write_text(s.replace(marker, insertion + marker), encoding='utf-8')
           PY
           git add -u
           git archive --format=tar -o source.tar "$(git write-tree)"
@@ -48,14 +42,19 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           python - <<'PY'
-          import json, os, pathlib, subprocess, urllib.request
+          import json, os, pathlib, subprocess, urllib.request, urllib.error
           root = 'https://api.github.com/repos/' + os.environ['GITHUB_REPOSITORY']
           def api(path, data=None):
               request = urllib.request.Request(root + path, data=json.dumps(data).encode() if data is not None else None,
                   headers={'Authorization': 'Bearer ' + os.environ['GH_TOKEN'], 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28'})
-              with urllib.request.urlopen(request) as response: return json.load(response)
-          candidate = api('/git/commits/ff4c235aa859e3ff2612455ea6e2ffcc5e1083f3')
+              try:
+                  with urllib.request.urlopen(request) as response: return json.load(response)
+              except urllib.error.HTTPError as error:
+                  print(error.read().decode('utf-8', errors='replace'))
+                  raise
+          candidate = api('/git/commits/af68d76d457b970c9a18d588215b6c100f9893f5')
           paths = [pathlib.Path(p) for p in subprocess.check_output(['git','diff','--cached','--name-only'],text=True).splitlines()]
+          assert all(not p.as_posix().startswith('.github/') for p in paths)
           tree = api('/git/trees', {'base_tree': candidate['tree']['sha'], 'tree': [
               {'path': path.as_posix(), 'mode': '100644', 'type': 'blob', 'content': path.read_text(encoding='utf-8')} for path in paths]})
           commit = api('/git/commits', {'message': 'refactor: ship curated tool collection with shared web/Windows launcher and locked builds',
@@ -65,6 +64,7 @@ jobs:
           print(json.dumps(report, indent=2))
           PY
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: v3-source
           path: |
