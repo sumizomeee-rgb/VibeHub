@@ -18,43 +18,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ae29581382c3d81c35b14353c011c1956b66c101
-      - uses: actions/setup-python@v5
+          ref: ff4c235aa859e3ff2612455ea6e2ffcc5e1083f3
+      - uses: actions/setup-node@v4
         with:
-          python-version: '3.12'
-      - name: Apply reviewed integration fixes
+          node-version: '22'
+      - name: Repair frontend lock within existing version ranges
+        working-directory: frontend
+        run: |
+          npm audit fix --package-lock-only --ignore-scripts
+          npm audit --audit-level=high
+      - name: Improve validation diagnostics and Chinese font fallback
         run: |
           python - <<'PY'
           from pathlib import Path
-          p = Path('hub_core/child_process.py')
-          s = p.read_text()
-          old = '        self.file.seek(0)\n        if not self.file.read(1):\n            self.file.write(b"0")\n            self.file.flush()\n        self.file.seek(0)\n        try:\n            if os.name == "nt":'
-          new = '        try:\n            # Windows denies reads of a region locked by another process. Inspect\n            # the file length instead, and include setup in the failure cleanup.\n            if os.fstat(self.file.fileno()).st_size == 0:\n                self.file.write(b"0")\n                self.file.flush()\n            self.file.seek(0)\n            if os.name == "nt":'
-          assert old in s
-          p.write_text(s.replace(old, new), encoding='utf-8')
-          p = Path('hub_core/caddy_gateway.py')
-          s = p.read_text()
-          old = '        response = await self.client.post("/config/apps/http/servers/vibehub/routes", json=self._routes(routes))'
-          new = '        # PATCH replaces the routes array; POST would append a nested array.\n        response = await self.client.patch("/config/apps/http/servers/vibehub/routes", json=self._routes(routes))'
-          assert old in s
-          p.write_text(s.replace(old, new), encoding='utf-8')
           p = Path('frontend/src/index.css')
-          p.write_text(p.read_text().replace(':root { --vh-bg: #f3f4f8; }\n', ''), encoding='utf-8')
-          p = Path('desktop.py')
-          s = p.read_text()
-          old = '        raise\n\n\nif __name__'
-          new = '        traceback.print_exc()\n        raise SystemExit(1) from error\n\n\nif __name__'
-          assert old in s
-          p.write_text(s.replace(old, new), encoding='utf-8')
-          p = Path('.github/workflows/verify.yml')
-          s = p.read_text().replace('          name: verification-${{ runner.os }}\n', '          name: verification-${{ runner.os }}\n          include-hidden-files: true\n')
+          s = p.read_text().replace('"Inter", -apple-system, BlinkMacSystemFont, sans-serif', '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif')
           p.write_text(s, encoding='utf-8')
+          p = Path('.github/workflows/verify.yml')
+          s = p.read_text()
+          marker = '      - name: Install test browser\n'
+          insertion = '      - name: Audit frontend dependencies\n        working-directory: frontend\n        run: npm audit --audit-level=high\n      - name: Install Chinese fonts for Linux visual verification\n        if: runner.os == \'Linux\'\n        run: sudo apt-get update && sudo apt-get install -y fonts-noto-cjk\n'
+          assert marker in s
+          p.write_text(s.replace(marker, insertion + marker), encoding='utf-8')
           PY
-      - name: Restore and stage dependency locks
-        shell: bash
-        run: |
-          python -m pip install uv==0.8.22
-          uv lock --check
           git add -u
           git archive --format=tar -o source.tar "$(git write-tree)"
       - name: Prepare immutable commit without updating any branch
@@ -68,7 +54,7 @@ jobs:
               request = urllib.request.Request(root + path, data=json.dumps(data).encode() if data is not None else None,
                   headers={'Authorization': 'Bearer ' + os.environ['GH_TOKEN'], 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28'})
               with urllib.request.urlopen(request) as response: return json.load(response)
-          candidate = api('/git/commits/ae29581382c3d81c35b14353c011c1956b66c101')
+          candidate = api('/git/commits/ff4c235aa859e3ff2612455ea6e2ffcc5e1083f3')
           paths = [pathlib.Path(p) for p in subprocess.check_output(['git','diff','--cached','--name-only'],text=True).splitlines()]
           tree = api('/git/trees', {'base_tree': candidate['tree']['sha'], 'tree': [
               {'path': path.as_posix(), 'mode': '100644', 'type': 'blob', 'content': path.read_text(encoding='utf-8')} for path in paths]})
@@ -107,9 +93,8 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-      - name: Record existing frontend dependency audit
+      - name: Record frontend dependency audit
         if: runner.os == 'Linux'
-        continue-on-error: true
         working-directory: frontend
         run: mkdir -p ../verification && npm audit --json > ../verification/npm-audit.json
       - name: Restore locked build environment
@@ -118,6 +103,9 @@ jobs:
           uv sync --locked --group build --group test
       - name: Build web and native desktop outputs
         run: uv run --locked --group build --group test python build.py
+      - name: Install Chinese fonts for Linux visual verification
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y fonts-noto-cjk
       - name: Install test browser
         run: uv run --locked --group test python -m playwright install chromium
       - name: Live runtime, uploads, downloads and browser navigation
