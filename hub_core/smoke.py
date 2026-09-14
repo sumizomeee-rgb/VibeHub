@@ -16,6 +16,9 @@ def exercise_server(base_url: str) -> dict:
         for tool in tools:
             response = client.post(f"/api/tools/{tool['id']}/open", headers={"X-VibeHub-Request": "1"})
             assert response.status_code in {200, 202}, response.text
+        # Wait until every route has been published before exercising Caddy.
+        # Replacing its route table can reset an existing keep-alive connection,
+        # so page checks must not overlap another tool's route publication.
         for tool in tools:
             deadline = time.monotonic() + 240
             while time.monotonic() < deadline:
@@ -27,11 +30,12 @@ def exercise_server(base_url: str) -> dict:
                 time.sleep(0.25)
             else:
                 raise AssertionError(f"Timeout: {tool['id']}")
+            report["tools"][tool["id"]] = "ready"
+        for tool in tools:
             page = client.get(tool["url"])
             page.raise_for_status()
             assert "text/html" in page.headers.get("content-type", "")
             assert client.get(tool["url"].rstrip("/"), follow_redirects=False).status_code == 308
-            report["tools"][tool["id"]] = "ready"
         # Files that are separate from main.py must survive packaging and proxying.
         references = client.get("/tools/avatar_crop_tool/api/reference-images")
         references.raise_for_status()

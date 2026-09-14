@@ -51,7 +51,7 @@ Web 发布包运行 `start.bat` 或 `./start.sh`。默认仅监听 `127.0.0.1:95
 
 **单 exe 不等于完全离线。** Hub Python 已打包，但工具使用 uv 管理的独立 Python 和依赖；首次运行可能联网下载。现有工具中的第三方 CDN 资源仍可能需要联网。此版本不承诺离线首次启动。
 
-## 新增工具：只改工具与清单
+## 维护者添加工具：只改工具与清单
 
 1. 复制 `templates/basic-tool/` 到 `projects/<id>/`，实现功能。
 2. 在 `tools.json` 添加一项：
@@ -72,6 +72,8 @@ Web 发布包运行 `start.bat` 或 `./start.sh`。默认仅监听 `127.0.0.1:95
 ## 结构
 
 ```text
+docs/                 工具接入约定与统一 UI 规范
+frontend/             唯一一份 React 页面、ToolHost 与品牌 SVG
 hub_core/
   catalog.py          ToolSpec、目录/PEP 723 校验、资源收集
   tool_service.py     唯一启动协调器：去重、就绪、失败与重试
@@ -80,11 +82,14 @@ hub_core/
   caddy_gateway.py    当前实例专用的 Caddy 与动态路由
   api_adapter.py      只读清单、自动打开、发行下载 API
   application.py      两端共用的启动/退出生命周期
-frontend/             唯一一份 React 页面和 ToolHost
 projects/             工具代码、main.py.lock 与资源
+scripts/              运行时下载、品牌资产生成与集成检查
+templates/            维护者使用的基础工具模板
+tests/                平台与现有工具测试
 main.py               Web 入口
 desktop.py            WebView2 窗口与退出清理
 build.py              唯一构建入口
+tools.json            两端共用的工具清单
 ```
 
 两端都使用真实本地 HTTP 和相同子路径代理，不维护 TestClient 生产桥接分支。Caddy 由当前进程拥有，Admin API 使用随机回环端口，不使用全局 2019；Hub 内部端口也动态分配。桌面网关仅绑定回环地址。
@@ -101,7 +106,11 @@ build.py              唯一构建入口
 
 PyInstaller 临时解压目录只读使用，不能用于持久化。一个数据目录只允许一个活动实例；不会覆盖正在运行实例的状态。退出应用停止所有属于本实例的工具及 Caddy；Windows 用 Job Object 在异常退出时清理后代进程。
 
-旧的 `data/registry.json` / `registry_state.json` 不再参与启动，也不会被自动删除或覆盖。V3 使用随版本发布的 `tools.json`，不迁移旧自动启动配置。
+旧版 `data/registry.json` 已退出项目结构。V3 只读取随版本发布的 `tools.json`，不迁移旧自动启动配置。
+
+网页 favicon、页头标识和 Windows EXE 图标统一来自
+`frontend/public/vibehub-mark.svg`。Windows 构建会生成多尺寸 ICO 后交给 PyInstaller，
+不再使用 Python/PyInstaller 默认图标。
 
 ## 下载服务与发布
 

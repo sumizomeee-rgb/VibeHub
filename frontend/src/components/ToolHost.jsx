@@ -13,7 +13,7 @@ export default function ToolHost({ tool, active }) {
     let timer;
     setLoaded(false);
     setFrameFailed(false);
-    setState({ status: "starting", message: "正在准备工具，首次运行可能需要下载依赖…" });
+    setState({ status: "starting", message: "正在打开工具…" });
     const update = async (first = false) => {
       try {
         const next = await (first ? openTool(tool.id, controller.signal) : fetchTool(tool.id, controller.signal));

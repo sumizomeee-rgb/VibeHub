@@ -1,14 +1,7 @@
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Moon, Sun, Zap } from "./Icons";
+import { ArrowLeft } from "./Icons";
 
 export default function Header({ tool, release, desktop }) {
-  const [theme, setTheme] = useState(() => localStorage.getItem("vh-theme") || "light");
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    localStorage.setItem("vh-theme", theme);
-  }, [theme]);
-
   return (
     <header className="launcher-header">
       <div className="launcher-brand">
@@ -19,14 +12,11 @@ export default function Header({ tool, release, desktop }) {
             <span className="tool-heading">{tool.name}</span>
           </>
         ) : (
-          <Link to="/" className="brand-link"><span className="brand-symbol"><Zap size={19} /></span><strong>VibeHub</strong><span className="brand-caption">工具合集</span></Link>
+          <Link to="/" className="brand-link"><img className="brand-symbol" src="/vibehub-mark.svg" alt="" /><strong>VibeHub</strong><span className="brand-caption">工具合集</span></Link>
         )}
       </div>
       <div className="header-actions">
-        {!desktop && release && <a className="btn-ghost desktop-download" href={release.download_url}>Windows 客户端</a>}
-        <button className="btn-ghost" title={theme === "light" ? "深色模式" : "浅色模式"} aria-label="切换主题" onClick={() => setTheme(theme === "light" ? "dark" : "light")}>
-          {theme === "light" ? <Moon size={18} /> : <Sun size={18} />}
-        </button>
+        {!desktop && release && <a className="btn-ghost desktop-download" href={release.download_url}>下载 Windows 版</a>}
       </div>
     </header>
   );

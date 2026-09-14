@@ -12,11 +12,14 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
+from desktop import unique_download_path
 from hub_core.api_adapter import create_app, desktop_release
 from hub_core.catalog import Catalog, ToolSpec, script_metadata, project_files
 from hub_core.child_process import InstanceLock
 from hub_core.config import ROOT, Settings, resolve_executable
+from hub_core.process_manager import tool_environment
 from hub_core.tool_service import ToolService
+from hub_core.warmup import Warmer
 
 
 class FakeGateway:
@@ -110,6 +113,105 @@ class CatalogTests(unittest.TestCase):
                 first.release()
             second.acquire(); second.release()
 
+    def test_web_output_lives_with_persistent_data(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(
+                os.environ, {"VIBEHUB_DATA_DIR": tmp}, clear=True):
+            settings = Settings.from_env()
+            self.assertEqual(settings.output_dir, Path(tmp).resolve() / "output")
+
+    def test_desktop_output_lives_beside_executable(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            with patch.dict(os.environ, {"LOCALAPPDATA": str(root / "local")}, clear=True), \
+                    patch("sys.frozen", True, create=True), \
+                    patch("sys.executable", str(root / "VibeHub.exe")):
+                settings = Settings.from_env(desktop=True)
+            self.assertEqual(settings.data_dir, (root / "local/VibeHub").resolve())
+            self.assertEqual(settings.output_dir, (root / "VibeHub/output").resolve())
+
+    def test_tool_environment_exposes_output_directory(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            settings = Settings(data_dir=root / "data", output_dir=root / "results")
+            env = tool_environment(settings, "avatar_crop_tool")
+            self.assertEqual(env["VIBEHUB_OUTPUT_DIR"], str(root / "results"))
+            self.assertTrue((root / "results").is_dir())
+
+    def test_download_path_does_not_overwrite_existing_result(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp)
+            (output / "result.pdf").write_bytes(b"first")
+            self.assertEqual(unique_download_path(output, r"C:\Downloads\result.pdf"),
+                             output / "result (2).pdf")
+
+
+class WarmupTests(unittest.IsolatedAsyncioTestCase):
+    async def test_locked_script_is_prepared_and_task_finishes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            project = root / "project"
+            project.mkdir()
+            (project / "main.py").write_text("# /// script\n# dependencies = []\n# ///\n")
+            (project / "main.py.lock").write_text("version = 1\nrevision = 1\n")
+            tool = SimpleNamespace(id="demo")
+
+            class FakeCatalog:
+                tools = [tool]
+                def prepare(self, *_): return project
+
+            processes = []
+
+            class FinishedProcess:
+                alive = False
+                process = SimpleNamespace(returncode=0)
+                def __init__(self, command, **kwargs):
+                    self.command = command
+                    self.kwargs = kwargs
+                    self.stopped = False
+                    processes.append(self)
+                def stop(self): self.stopped = True
+
+            settings = Settings(bundle_dir=ROOT, data_dir=root / "data",
+                                output_dir=root / "output")
+            warmer = Warmer(settings, FakeCatalog(), FinishedProcess)
+            warmer.start()
+            await warmer.task
+            self.assertEqual(processes[0].command[-1], "--locked")
+            self.assertTrue(processes[0].stopped)
+
+    async def test_close_stops_active_preparation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            project = root / "project"
+            project.mkdir()
+            (project / "main.py").write_text("# /// script\n# dependencies = []\n# ///\n")
+            tool = SimpleNamespace(id="demo")
+
+            class FakeCatalog:
+                tools = [tool]
+                def prepare(self, *_): return project
+
+            processes = []
+
+            class WaitingProcess:
+                process = SimpleNamespace(returncode=None)
+                def __init__(self, *args, **kwargs):
+                    self.alive = True
+                    self.stopped = False
+                    processes.append(self)
+                def stop(self):
+                    self.alive = False
+                    self.stopped = True
+
+            settings = Settings(bundle_dir=ROOT, data_dir=root / "data",
+                                output_dir=root / "output")
+            warmer = Warmer(settings, FakeCatalog(), WaitingProcess)
+            warmer.start()
+            await asyncio.sleep(0)
+            await warmer.close()
+            self.assertTrue(processes[0].stopped)
+            self.assertTrue(warmer.task is None)
+
 
 class ServiceTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
@@ -172,7 +274,7 @@ class ServiceTests(unittest.IsolatedAsyncioTestCase):
 class ApiTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
-        self.settings = Settings(data_dir=Path(self.temp.name))
+        self.settings = Settings(data_dir=Path(self.temp.name), warmup=False)
         self.gateway = FakeGateway()
         self.runner = FakeRunner()
         self.service = ToolService(Catalog(ROOT), self.runner, self.gateway)

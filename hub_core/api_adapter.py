@@ -12,6 +12,7 @@ from hub_core.caddy_gateway import CaddyGateway
 from hub_core.config import Settings
 from hub_core.process_manager import ToolRunner
 from hub_core.tool_service import ToolService
+from hub_core.warmup import Warmer
 
 
 def desktop_release(directory: Path) -> tuple[dict, Path]:
@@ -40,15 +41,18 @@ def create_app(settings: Settings | None = None, *, service=None, gateway=None) 
     catalog = service.catalog if service else Catalog(settings.bundle_dir)
     gateway = gateway or CaddyGateway(settings)
     service = service or ToolService(catalog, ToolRunner(settings, catalog), gateway)
+    warmer = Warmer(settings, catalog)
 
     @asynccontextmanager
     async def lifespan(app):
         catalog.validate()
         try:
             await gateway.start()
+            warmer.start()  # Off the request path; a cold tool still resolves on demand.
             yield
         finally:
             try:
+                await warmer.close()
                 await service.close()
             finally:
                 await gateway.close()
@@ -56,6 +60,7 @@ def create_app(settings: Settings | None = None, *, service=None, gateway=None) 
     app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.tools = service
     app.state.gateway = gateway
+    app.state.warmer = warmer
 
     @app.middleware("http")
     async def same_origin_mutations(request: Request, call_next):

@@ -35,7 +35,7 @@ class ToolService:
             return state
         task = self.tasks.get(tool_id)
         if not task or task.done():
-            self.states[tool_id] = {"status": "starting", "message": "正在准备工具，首次运行可能需要下载依赖…"}
+            self.states[tool_id] = {"status": "starting", "message": "正在打开工具…"}
             self.tasks[tool_id] = asyncio.create_task(self._launch(tool_id), name=f"tool:{tool_id}")
         return self.view(tool_id)
 
@@ -53,7 +53,7 @@ class ToolService:
         except Exception:
             log.exception("Failed to launch %s", tool_id)
             await self.runner.stop(tool_id)
-            self.states[tool_id] = {"status": "error", "message": "工具启动失败。请确认网络可用后重试；详细原因已记录到本机日志。"}
+            self.states[tool_id] = {"status": "error", "message": "工具启动失败，请重试；详细原因已记录到本机日志。"}
 
     async def close(self):
         self.closing = True

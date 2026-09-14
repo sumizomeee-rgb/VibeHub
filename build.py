@@ -11,6 +11,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import time
 import zipfile
 
 from hub_core.catalog import Catalog, project_files
@@ -86,6 +87,37 @@ def write_manifest(executable: Path, version: str) -> dict:
     return result
 
 
+def notify_windows_shell(path: Path):
+    """Tell Explorer to discard cached metadata for a rebuilt executable."""
+    if os.name != "nt":
+        return
+    import ctypes
+
+    shell_change_update_item = 0x00002000
+    shell_notify_path_w = 0x0005
+    ctypes.windll.shell32.SHChangeNotify(
+        shell_change_update_item,
+        shell_notify_path_w,
+        ctypes.c_wchar_p(str(path.resolve())),
+        None,
+    )
+
+
+def publish_windows_executable(staged: Path, destination: Path):
+    """Publish a completed EXE atomically so scanners never see a half-built file."""
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary = destination.with_suffix(".exe.tmp")
+    shutil.copy2(staged, temporary)
+    for attempt in range(20):
+        try:
+            temporary.replace(destination)
+            return
+        except PermissionError:
+            if attempt == 19:
+                raise
+            time.sleep(0.05 * (attempt + 1))
+
+
 def build_windows(catalog: Catalog) -> Path:
     if host_platform() != "windows-x64":
         raise RuntimeError("Windows exe must be built on Windows; use --target web here")
@@ -94,8 +126,13 @@ def build_windows(catalog: Catalog) -> Path:
     stage.mkdir(parents=True)
     copy_projects(catalog, stage)
     binaries = fetch_runtime(ROOT, "windows-x64")
+    run([sys.executable, str(ROOT / "scripts/build_brand_assets.py")])
+    icon = ROOT / "build/branding/vibehub.ico"
+    windows_dist = ROOT / "build/windows-dist"
+    if windows_dist.exists():
+        shutil.rmtree(windows_dist)
     command = [sys.executable, "-m", "PyInstaller", "--noconfirm", "--clean", "--onefile", "--windowed",
-               "--name", "VibeHub", "--distpath", str(ROOT / "release/windows"),
+               "--name", "VibeHub", "--icon", str(icon), "--distpath", str(windows_dist),
                "--workpath", str(ROOT / "build/pyinstaller"), "--specpath", str(ROOT / "build"),
                "--paths", str(ROOT), "--collect-all", "webview", "--collect-all", "pythonnet",
                "--hidden-import", "uvicorn.logging", "--hidden-import", "uvicorn.loops.auto",
@@ -111,7 +148,9 @@ def build_windows(catalog: Catalog) -> Path:
     command.append(str(ROOT / "desktop.py"))
     run(command)
     executable = ROOT / "release/windows/VibeHub.exe"
+    publish_windows_executable(windows_dist / "VibeHub.exe", executable)
     write_manifest(executable, Settings().version)
+    notify_windows_shell(executable)
     return executable
 
 

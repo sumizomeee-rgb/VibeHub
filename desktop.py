@@ -12,6 +12,37 @@ from hub_core.application import Application
 from hub_core.config import Settings
 
 
+def unique_download_path(output_dir: Path, suggested_path: str) -> Path:
+    """Choose a visible output path without replacing an earlier result."""
+    output_dir.mkdir(parents=True, exist_ok=True)
+    name = Path(suggested_path).name or "download"
+    target = output_dir / name
+    stem, suffix = target.stem, target.suffix
+    counter = 2
+    while target.exists():
+        target = output_dir / f"{stem} ({counter}){suffix}"
+        counter += 1
+    return target
+
+
+def save_downloads_to(output_dir: Path):
+    """Send tool results straight to the output folder instead of prompting.
+
+    pywebview's EdgeChromium backend opens a native Save-As dialog for every
+    download. Tools stream their results as attachments, so the browser version
+    simply saves the file; the desktop must not add a step the web build lacks.
+    """
+    from webview.platforms import edgechromium
+
+    def on_download_starting(self, sender, args):
+        if not edgechromium.webview_settings["ALLOW_DOWNLOADS"]:
+            args.Cancel = True
+            return
+        args.ResultFilePath = str(unique_download_path(output_dir, args.ResultFilePath))
+
+    edgechromium.EdgeChrome.on_download_starting = on_download_starting
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--smoke-test", action="store_true", help="Test the frozen server and all bundled tool entrypoints without a GUI")
@@ -20,6 +51,7 @@ def main():
     args = parser.parse_args()
     settings = Settings.from_env(desktop=True)
     settings.data_dir.mkdir(parents=True, exist_ok=True)
+    settings.output_dir.mkdir(parents=True, exist_ok=True)
     # A --windowed PyInstaller process has no stdout/stderr. Libraries still use them.
     if sys.stdout is None:
         sys.stdout = (settings.data_dir / "logs-desktop.txt").open("a", encoding="utf-8")
@@ -36,6 +68,8 @@ def main():
                 return
             import webview
             webview.settings["ALLOW_DOWNLOADS"] = True
+            if os.name == "nt":
+                save_downloads_to(settings.output_dir)
             window = webview.create_window("VibeHub", application.url, width=1280, height=860, min_size=(760, 560))
             errors = []
 

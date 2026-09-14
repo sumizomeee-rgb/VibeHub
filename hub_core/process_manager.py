@@ -11,6 +11,34 @@ from hub_core.config import Settings, resolve_executable
 from hub_core.caddy_gateway import free_port
 
 
+def tool_environment(settings: Settings, tool_id: str) -> dict[str, str]:
+    """The one environment tools are prepared and started with.
+
+    The warm-up and the runner must agree exactly here: uv keys a script's
+    environment by these directories, and a mismatch means the cache is cold again.
+    """
+    env = clean_environment()
+    data = settings.data_dir
+    tool_data = data / "tools" / tool_id
+    tool_data.mkdir(parents=True, exist_ok=True)
+    settings.output_dir.mkdir(parents=True, exist_ok=True)
+    env.update({"PYTHONUNBUFFERED": "1", "UV_NO_PROGRESS": "1",
+                "UV_CACHE_DIR": str(data / "runtime/uv"),
+                "UV_PYTHON_INSTALL_DIR": str(data / "runtime/python"),
+                "UV_PYTHON": settings.tool_python,
+                "VIBEHUB_TOOL_DATA_DIR": str(tool_data),
+                "VIBEHUB_OUTPUT_DIR": str(settings.output_dir)})
+    return env
+
+
+def tool_command(settings: Settings, script: Path) -> list[str]:
+    command = [str(resolve_executable("uv", settings.bundle_dir)), "run", "--no-project"]
+    if script.with_suffix(".py.lock").exists():
+        command.append("--locked")
+    command += ["--script", str(script)]
+    return command
+
+
 @dataclass
 class RunningTool:
     child: ChildProcess
@@ -33,22 +61,11 @@ class ToolRunner:
         if not script.is_file():
             raise FileNotFoundError(script)
         port = free_port()
-        env = clean_environment()
-        data = self.settings.data_dir
-        tool_data = data / "tools" / tool.id
-        tool_data.mkdir(parents=True, exist_ok=True)
-        env.update({"PORT": str(port), "DISPLAY_NAME": tool.name,
-                    "PYTHONUNBUFFERED": "1", "UV_NO_PROGRESS": "1",
-                    "UV_CACHE_DIR": str(data / "runtime/uv"),
-                    "UV_PYTHON_INSTALL_DIR": str(data / "runtime/python"),
-                    "UV_PYTHON": self.settings.tool_python,
-                    "VIBEHUB_TOOL_DATA_DIR": str(tool_data)})
-        command = [str(resolve_executable("uv", self.settings.bundle_dir)), "run", "--no-project"]
-        if script.with_suffix(".py.lock").exists():
-            command.append("--locked")
-        command += ["--script", str(script)]
+        env = tool_environment(self.settings, tool.id)
+        env.update({"PORT": str(port), "DISPLAY_NAME": tool.name})
+        command = tool_command(self.settings, script)
         child = ChildProcess(command, cwd=directory, env=env,
-                             log_file=data / "logs/tools" / f"{tool.id}.log")
+                             log_file=self.settings.data_dir / "logs/tools" / f"{tool.id}.log")
         result = RunningTool(child, port)
         self.running[tool.id] = result
         return result

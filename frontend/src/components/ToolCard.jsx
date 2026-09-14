@@ -12,13 +12,13 @@ function ToolIcon({ kind }) {
   return <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[kind] || paths.tool}</svg>;
 }
 
-export default function ToolCard({ tool }) {
+export default function ToolCard({ tool, index }) {
   return (
-    <Link to={`/tool/${tool.id}`} data-tool-card={tool.id} className="launcher-card">
+    <Link to={`/tool/${tool.id}`} data-tool-card={tool.id} className="launcher-card" style={{ "--card-delay": `${index * 55}ms` }}>
+      <span className="card-number">{String(index + 1).padStart(2, "0")}</span>
       <span className="tool-icon"><ToolIcon kind={tool.icon} /></span>
-      <h2>{tool.name}</h2>
-      <p>{tool.description}</p>
-      <span className="tool-enter">打开工具 <span aria-hidden="true">↗</span></span>
+      <div className="tool-copy"><h2>{tool.name}</h2><p>{tool.description}</p></div>
+      <span className="tool-enter">开始使用 <span aria-hidden="true">→</span></span>
     </Link>
   );
 }
