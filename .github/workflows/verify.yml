@@ -26,23 +26,27 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-      - name: Install backend dependencies
-        run: python -m pip install .
+      - name: Install uv and restore locked backend dependencies
+        run: |
+          python -m pip install uv==0.8.22
+          uv sync --locked
       - name: Backend tests
-        run: python -m unittest discover -s tests -v
+        run: uv run --locked python -m unittest discover -s tests -v
       - name: Frontend build
         working-directory: frontend
         run: npm ci && npm run build
         shell: bash
       - name: Export source and frontend verification workspace
-        if: runner.os == 'Linux'
+        if: always() && runner.os == 'Linux'
         shell: bash
         run: |
           mkdir -p verification
           git archive --format=tar HEAD > verification/source.tar
-          tar -czf verification/frontend-dependencies.tar.gz -C frontend node_modules
+          if [ -d frontend/node_modules ]; then
+            tar -czf verification/frontend-dependencies.tar.gz -C frontend node_modules
+          fi
       - uses: actions/upload-artifact@v4
-        if: runner.os == 'Linux'
+        if: always() && runner.os == 'Linux'
         with:
           name: verification-workspace-linux
           path: verification/
